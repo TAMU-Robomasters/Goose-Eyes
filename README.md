@@ -10,5 +10,5 @@ If you don't have UV follow instructions: https://docs.astral.sh/uv/getting-star
 To run code do:
 
  ``` bash
-ur run main.py
+uv run main.py
 ```
