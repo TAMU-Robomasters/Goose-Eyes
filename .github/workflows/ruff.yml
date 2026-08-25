@@ -37,7 +37,7 @@ jobs:
       # 2) If lint failed, re-format, commit, and push the fixes
       ##############################################################
       - name: Auto-format with Ruff and push
-        if: steps.ruff-lint.outputs.status != '0'
+        id: ruff-format
         run: |
           echo "Ruff found style issues – applying fixes…"
           uvx ruff format .
