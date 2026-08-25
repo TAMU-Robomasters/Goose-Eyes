@@ -1,24 +1,73 @@
-name: Ruff Check & Format
+name: Ruff Lint & Auto-format
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
     branches: [ main ]
+    types: [opened, synchronize, reopened]   # run whenever commits are (re) pushed
+
+permissions:
+  contents: write    # allow the bot to push fixes
 
 jobs:
   ruff:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0       # required so we can push back to the same branch
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
 
-      - name: Run Ruff Linter
-        run: uvx ruff check
+      #################################################################
+      # 1) Lint pass – we capture success/failure in an output variable
+      #################################################################
+      - name: Ruff lint (check mode)
+        id: ruff-lint
+        run: |
+          set +e
+          uvx ruff check
+          echo "status=$?" >> "$GITHUB_OUTPUT"
 
-      - name: Run Ruff Formatter
-        run: uvx ruff format --check
+      ##############################################################
+      # 2) If lint failed, re-format, commit, and push the fixes
+      ##############################################################
+      - name: Auto-format with Ruff and push
+        if: steps.ruff-lint.outputs.status != '0'
+        run: |
+          echo "Ruff found style issues – applying fixes…"
+          uvx ruff format .
+
+          # Any changes?
+          if [ -n "$(git status --porcelain)" ]; then
+            git config --global user.name  "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+            git add .
+            git commit -m "style: apply Ruff auto-format"
+            git push
+            echo "Pushed Ruff formatting fixes back to PR branch."
+          else
+            echo "No changes after formatting."
+          fi
+
+      ##############################################################
+      # 3) Re-run lint in strict mode; fail if it still isn’t clean
+      ##############################################################
+      - name: Re-check Ruff after auto-format
+        if: steps.ruff-lint.outputs.status != '0'
+        run: uvx ruff check .
+
+      ##############################################################
+      # 4) Exit early with failure if the initial lint failed and
+      #    we could not auto-fix everything (rare)
+      ##############################################################
+      - name: Fail if issues remain
+        if: steps.ruff-lint.outputs.status != '0'
+        run: |
+          echo "::error::Ruff formatting issues remain after auto-format. Please fix locally."
+          exit 1
