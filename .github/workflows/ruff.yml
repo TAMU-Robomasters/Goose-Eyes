@@ -49,7 +49,7 @@ jobs:
 
             git add .
             git commit -m "style: apply Ruff auto-format"
-            git push
+            git push origin HEAD 
             echo "Pushed Ruff formatting fixes back to PR branch."
           else
             echo "No changes after formatting."
