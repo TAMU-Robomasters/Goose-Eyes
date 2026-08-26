@@ -3,5 +3,5 @@ def main():
 
 
 if __name__ == "__main__":
-    test=0
+    test = 0
     main()
