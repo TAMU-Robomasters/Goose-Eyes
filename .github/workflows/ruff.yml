@@ -11,16 +11,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      
+
       - name: Run Ruff Linter
-        run: uv run ruff check .
-        continue-on-error: false
-      
+        run: uvx ruff check
+
       - name: Run Ruff Formatter
-        run: uv run ruff format --check .
-        continue-on-error: false
+        run: uvx ruff format --check
