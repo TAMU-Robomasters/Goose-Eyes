@@ -1,0 +1,30 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "nvidia,p3737-0000+p3701-0005",
+                 "nvidia,p3701-0005",
+                 "nvidia,tegra234";
+
+    fragment@0 {
+        target-path = "/";
+        __overlay__ {
+            hte_clock {
+                compatible = "custom,hte-clock";
+                status = "okay";
+
+                /*
+                 * Your external clock input.
+                 */
+                in-gpios = <&gpio_aon 9 0>;
+
+                /*
+                 * Required by NVIDIA test driver.
+                 * Use the same value that was working before.
+                 */
+                timestamps = <&hte_aon 9>;
+                timestamp-names = "external-clock";
+            };
+        };
+    };
+};
