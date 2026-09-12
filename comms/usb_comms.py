@@ -270,7 +270,7 @@ if __name__ == "__main__":
     VID = 0x0483
     PID = 0x5740
 
-    usb_dev = usb_comms(VID, PID, packet_size=1344)
+    usb_dev = usb_comms(VID, PID, packet_size=1216)
 
     print("starting ...")
 
