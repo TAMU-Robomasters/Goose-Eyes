@@ -1,0 +1,39 @@
+[workspace]
+authors = ["kahzmic <159095560+kahzmic@users.noreply.github.com>"]
+channels = ["robostack-jazzy", "conda-forge"]
+name = "Goose-Eyes"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[activation.env]
+# gz-transport discovers peers over UDP multicast, which macOS rejects ("No route to host")
+# unless an interface has a multicast route. Pin it to loopback so `ros_gz_sim create`
+# can find the gz server and spawn the robot.
+GZ_IP = "127.0.0.1"
+
+[tasks]
+# Nav2 quickstart (https://docs.nav2.org/getting_started/) — Gazebo (gz sim) + Nav2 + RViz with TurtleBot3.
+# In RViz: click "2D Pose Estimate" within ~60 s of launch (global_costmap gives up waiting for
+# map->base_link after that and planner_server fails to activate), then "Nav2 Goal" to drive.
+nav2-quickstart = "ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False"
+# Same, but no Gazebo GUI (RViz only).
+nav2-headless = "ros2 launch nav2_bringup tb3_simulation_launch.py headless:=True"
+# SLAM variant: build the map live instead of loading tb3_sandbox.yaml.
+nav2-slam = "ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False slam:=True"
+
+[dependencies]
+python = "3.12.*"
+ros-jazzy-navigation2 = ">=1.3.12,<2"
+ros-jazzy-nav2-bringup = ">=1.3.12,<2"
+ros-jazzy-nav2-minimal-tb3-sim = ">=1.0.1,<2"
+ros-jazzy-nav2-minimal-tb4-sim = ">=1.0.1,<2"
+ros-jazzy-rviz2 = ">=14.1.23,<15"
+ros-jazzy-ros-base = ">=0.11.0,<0.12"
+coreutils = ">=9.11,<10"
+opencv = ">=4.13.0,<5"
+
+[pypi-dependencies]
+dora-rs-cli = "==1"
+dora-rs = ">=1.0.1, <2"
+pdoc = ">=16.0.0, <17"
+

@@ -1,1 +1,9 @@
-.venv/
+.venv/# pixi environments
+.pixi/*
+!.pixi/config.toml
+out
+
+__pycache__
+
+# for mac
+.DS_Store

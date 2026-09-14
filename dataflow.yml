@@ -1,0 +1,31 @@
+nodes:
+  - id: camera
+    path: camera_capture.py
+    outputs:
+      - image
+
+  - id: displayer 
+    path: second_frame_displayer.py
+    inputs:
+      image: camera/image
+
+  - id: displayer2
+    path: second_frame_displayer.py
+    inputs:
+      image: camera/image
+
+  - id: displayer3
+    path: second_frame_displayer.py
+    inputs:
+      image: camera/image
+
+  - id: displayer4
+    path: second_frame_displayer.py
+    inputs:
+      image: camera/image
+
+  - id: displayer5
+    path: second_frame_displayer.py
+    inputs:
+      image: camera/image
+
