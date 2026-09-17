@@ -1,6 +1,7 @@
 import sys
 import cv2
 import pyarrow as pa
+import time
 from dora import Node
 
 cap = cv2.VideoCapture(2)
@@ -20,6 +21,7 @@ while True:
     image = pa.array(frame.ravel())
     metadata = {
         "shape": frame.shape,
+        "time": time.time()
     }
     
     node.send_output("image", image, metadata=metadata)

@@ -35,5 +35,5 @@ opencv = ">=4.13.0,<5"
 [pypi-dependencies]
 dora-rs-cli = "==1"
 dora-rs = ">=1.0.1, <2"
-pdoc = ">=16.0.0, <17"
+rerun-sdk = ">=0.38.1, <0.39"
 

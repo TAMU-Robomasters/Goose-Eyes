@@ -1,0 +1,17 @@
+nodes:
+  - id: camera
+    path: camera_capture.py
+    outputs:
+      - image
+
+  - id: displayer 
+    path: second_frame_displayer.py
+    inputs:
+      image: camera/image
+
+  - id: rerun
+    path: rerun_image_test.py
+    inputs:
+      image: camera/image
+
+

@@ -7,8 +7,7 @@ Autonomy code base for 26-27 season
 
 ## Setup
 
-This repo uses [pixi](https://pixi.sh) to manage the environment (Python, [dora-rs](https://dora-rs.ai), ROS 2 Jazzy + Nav2).
-Install pixi if you don't have it:
+This repo uses [pixi](https://pixi.sh) to manage the environment. Install pixi if you don't have it. Pixi is very similar to uv it actually uses uv to get packages from the PyPI (Python package repository) but you can also manage non-python packages that are stored on [conda-forge](https://conda-forge.org/)(e.g. ROS2!):
 
 ```bash
 curl -fsSL https://pixi.sh/install.sh | sh
@@ -64,4 +63,11 @@ pixi run nav2-slam         # build the map live instead of loading the saved one
 ```
 
 In RViz: click **2D Pose Estimate** within ~60 s of launch, then **Nav2 Goal** to drive.
-See the comments in `pixi.toml` for the macOS-specific bits (`GZ_IP`, the pose-estimate timeout).
+
+## Test Rerun.io and DORA
+
+Run:
+
+```bash
+pixi run dora run rerun-test.yml
+```

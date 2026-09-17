@@ -1,21 +1,19 @@
-import cv2
-import time
+import rerun as rr
 from dora import Node
 
-node = Node()
+node = Node() 
+rr.init("camera_test", spawn=True)
+
 for event in node:
     if event["type"] == "INPUT":
         md = event["metadata"]
         shape = md["shape"]
         pub_time = md["time"]
-        print(f"latency: {(time.time() - pub_time) * 1E6}")
         image_raveled = event["value"].to_numpy()
         image = image_raveled.reshape(shape)
-        cv2.imshow("second", image)
-        cv2.waitKey(1)
-        print("recieved image")
+        rr.log("image", rr.Image(image, color_model="BGR"))
+        rr.set_time("main", duration=pub_time)
     elif event["type"] == "STOP":
         break
 
-cv2.destroyAllWindows()
 
