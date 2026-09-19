@@ -282,33 +282,34 @@ if __name__ == "__main__":
     print("starting ...")
 
     try:
+        usb_dev.drain_rx()
+
         start_pulse, start_time = usb_dev.reset_start_pulse()
 
         print("Start pulse:", start_pulse)
         print("Start time:", start_time)
-
         # Optional: clear anything stale after reset.
-        usb_dev.drain_rx()
 
         while True:
-            gimbal = usb_dev.query_gimbal(
-                timestamp=usb_dev.hte.current_pulse,
-                timeout=1000
-            )
+            try:
+                usb_dev.hte.update()
+                print("Jetson pulse",usb_dev.hte.current_pulse - usb_dev.hte.start_pulse
+                )
+                gimbal = usb_dev.query_gimbal(
+                    timestamp=usb_dev.hte.current_pulse - usb_dev.hte.start_pulse,
+                    timeout=1000
+                )
 
-            print(
-                "Received gimbal:",
-                "timestamp =", gimbal.timestamp,
-                "yaw =", gimbal.yaw,
-                "pitch =", gimbal.pitch
-            )
+                print(
+                    "Received gimbal:",
+                    "timestamp =", gimbal.timestamp,
+                    "yaw =", gimbal.yaw,
+                    "pitch =", gimbal.pitch
+                )
+                time.sleep(1)
+            except Exception as e:
+                print("Error during communication:", e)
 
-            usb_dev.hte.update()
-
-            print(
-                "Jetson pulse",
-                usb_dev.hte.current_pulse - usb_dev.hte.start_pulse
-            )
 
     except KeyboardInterrupt:
         pass
