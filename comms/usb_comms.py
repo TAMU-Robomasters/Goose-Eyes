@@ -1,6 +1,9 @@
+import time
 import usb.core
 import usb.util
+
 import hteClock
+import commStructs
 
 
 class usb_comms:
@@ -94,68 +97,55 @@ class usb_comms:
 
         raise RuntimeError("No bulk IN/OUT interface found")
 
-    def build_message(self, **fields):
+    def send_raw(self, data: bytes):
         """
-        Build a message like:
-
-            :timestamp=12345678:num1=100:num2=200:\\n
+        Send raw bytes over bulk OUT.
         """
-        parts = []
-
-        for name, value in fields.items():
-            name = str(name)
-            value = str(value)
-
-            if ":" in name or "=" in name or "\n" in name:
-                raise ValueError(f"Invalid field name: {name}")
-
-            if ":" in value or "\n" in value:
-                raise ValueError(f"Invalid field value: {value}")
-
-            parts.append(f"{name}={value}")
-
-        message = ":" + ":".join(parts) + ":\n"
-        return message.encode("ascii")
-
-    def send_raw(self, data):
-        """
-        Send raw bytes or string.
-
-        No padding is used.
-        """
-        if isinstance(data, str):
-            data = data.encode("ascii")
+        if not isinstance(data, bytes):
+            raise TypeError("send_raw expects bytes")
 
         self.ep_out.write(data, timeout=self.timeout)
 
-    def send_message(self, **fields):
+    def send_packet(self, packet):
         """
-        Send a formatted protocol message.
-
-        Example:
-
-            self.send_message(timestamp=12345678, num1=100, num2=200)
-
-        Sends:
-
-            :timestamp=12345678:num1=100:num2=200:\\n
+        Send a packet object that has a pack() method.
         """
-        data = self.build_message(**fields)
-        self.send_raw(data)
+        self.send_raw(packet.pack())
 
-    def receive_chunk(self):
+    def send_query(self, timestamp: int, request_number: int):
         """
-        Read one USB chunk.
+        Send a QueryPacket to the dev board.
 
-        This may be a full message, part of a message, or multiple messages.
+        The dev board should decode this and only respond if the request
+        requires a response.
         """
+        packet = commStructs.QueryPacket(
+            timestamp=timestamp,
+            requestNumber=request_number
+        )
+
+        self.send_packet(packet)
+
+    def receive_chunk(self, timeout=None):
+        """
+        Read one USB chunk from bulk IN.
+
+        This may return:
+            - empty bytes on timeout
+            - part of a packet
+            - one full packet
+            - multiple packets
+        """
+        if timeout is None:
+            timeout = self.timeout
+
         try:
-            data = self.ep_in.read(self.packet_size, timeout=self.timeout)
+            data = self.ep_in.read(self.packet_size, timeout=timeout)
             return bytes(data)
 
         except usb.core.USBError as e:
             # Timeout is normal if no data arrived.
-            if e.errno == 110:
+            if getattr(e, "errno", None) == 110:
                 return b""
 
             if "timeout" in str(e).lower() or "timed out" in str(e).lower():
@@ -163,97 +153,109 @@ class usb_comms:
 
             raise
 
-    def receive_messages(self, max_reads=100):
+    def read_exact(self, num_bytes: int, timeout=None) -> bytes:
         """
-        Read many USB chunks and parse all complete messages.
+        Read exactly num_bytes from USB.
 
-        max_reads limits how much time we spend draining USB in one call.
+        This function uses self.rx_buffer so it handles cases where USB gives:
+            - less than one packet
+            - exactly one packet
+            - more than one packet
+
+        Raises TimeoutError if not enough bytes arrive before timeout.
         """
-        messages = []
+        if timeout is None:
+            timeout = self.timeout
 
-        for _ in range(max_reads):
-            chunk = self.receive_chunk()
+        deadline = time.monotonic() + timeout / 1000.0
+
+        while len(self.rx_buffer) < num_bytes:
+            remaining_time = deadline - time.monotonic()
+
+            if remaining_time <= 0:
+                raise TimeoutError(
+                    f"Timed out waiting for {num_bytes} bytes. "
+                    f"Only received {len(self.rx_buffer)} bytes."
+                )
+
+            chunk_timeout_ms = max(1, int(remaining_time * 1000))
+
+            chunk = self.receive_chunk(timeout=chunk_timeout_ms)
+
+            if chunk:
+                self.rx_buffer += chunk
+
+        data = self.rx_buffer[:num_bytes]
+        self.rx_buffer = self.rx_buffer[num_bytes:]
+
+        return data
+
+    def read_packet(self, packet_class, timeout=None):
+        """
+        Read one fixed-size packet and unpack it.
+
+        packet_class must have:
+            SIZE
+            unpack(data)
+        """
+        data = self.read_exact(packet_class.SIZE, timeout=timeout)
+        return packet_class.unpack(data)
+
+    def drain_rx(self):
+        """
+        Clear any pending/stale USB input data.
+
+        Useful during startup or error recovery.
+        """
+        self.rx_buffer = b""
+
+        while True:
+            chunk = self.receive_chunk(timeout=10)
 
             if not chunk:
                 break
 
-            self.rx_buffer += chunk
-
-            while b"\n" in self.rx_buffer:
-                line, self.rx_buffer = self.rx_buffer.split(b"\n", 1)
-                line = line.strip()
-
-                if not line:
-                    continue
-
-                try:
-                    msg = self.parse_message(line)
-                    messages.append(msg)
-                except ValueError as e:
-                    print("Bad message:", e, "line:", line)
-
-        return messages
-
-    def parse_message(self, line):
+    def query_gimbal(self, timestamp=0, timeout=None, flush_stale=False):
         """
-        Parse one complete message without the newline.
+        Query/receive transaction for gimbal position.
 
-        Input:
+        Flow:
 
-            b":timestamp=12345678:num1=100:num2=200:"
+            Jetson -> dev board:
+                QueryPacket(timestamp, REQUEST_GIMBAL_POS)
 
-        Output:
-
-            {
-                "timestamp": 12345678,
-                "num1": 100,
-                "num2": 200
-            }
+            dev board -> Jetson:
+                GimbalPacket(timestamp, yaw, pitch)
         """
-        text = line.decode("ascii")
+        if flush_stale:
+            self.drain_rx()
 
-        if not text.startswith(":"):
-            raise ValueError(f"Bad message start: {text}")
+        self.send_query(
+            timestamp=timestamp,
+            request_number=commStructs.REQUEST_GIMBAL_POS
+        )
 
-        if not text.endswith(":"):
-            raise ValueError(f"Bad message end: {text}")
-
-        # Remove first and last colon.
-        text = text[1:-1]
-
-        result = {}
-
-        if text == "":
-            return result
-
-        fields = text.split(":")
-
-        for field in fields:
-            if "=" not in field:
-                raise ValueError(f"Bad field: {field}")
-
-            name, value = field.split("=", 1)
-
-            # Convert numeric values to int when possible.
-            try:
-                value = int(value)
-            except ValueError:
-                pass
-
-            result[name] = value
-
-        return result
+        return self.read_packet(
+            commStructs.GimbalPacket,
+            timeout=timeout
+        )
 
     def reset_start_pulse(self):
         """
-        Send reset command and reset HTE start pulse.
+        Send reset request and reset HTE start pulse.
 
-        Sends:
+        This assumes REQUEST_RESET is a command that does not return data.
 
-            :cmd=r:\\n
+        If your firmware sends back an acknowledgment packet for reset,
+        then you should add a read_packet() call here for that ack packet.
         """
-        self.send_message(cmd="r")
+        self.send_query(
+            timestamp=0,
+            request_number=commStructs.REQUEST_RESET
+        )
+
         self.hte.reset_start_pulse()
+
         return self.hte.start_pulse, self.hte.start_time
 
     def close(self):
@@ -270,32 +272,46 @@ if __name__ == "__main__":
     VID = 0x0483
     PID = 0x5740
 
-    usb_dev = usb_comms(VID, PID, packet_size=1216)
+    usb_dev = usb_comms(
+        VID,
+        PID,
+        packet_size=64,
+        timeout=1000
+    )
 
     print("starting ...")
 
-    start_pulse, start_time = usb_dev.reset_start_pulse()
-
-    print("Start pulse:", start_pulse, "Start time:", start_time)
-
-    # Example send using your format.
-    usb_dev.send_message(
-        timestamp=0,
-        num1=0,
-        num2=0
-    )
     try:
+        start_pulse, start_time = usb_dev.reset_start_pulse()
+
+        print("Start pulse:", start_pulse)
+        print("Start time:", start_time)
+
+        # Optional: clear anything stale after reset.
+        usb_dev.drain_rx()
+
         while True:
-            messages = usb_dev.receive_messages()
+            gimbal = usb_dev.query_gimbal(
+                timestamp=usb_dev.hte.current_pulse,
+                timeout=1000
+            )
 
-            for msg in messages:
-                print("Received:", msg)
+            print(
+                "Received gimbal:",
+                "timestamp =", gimbal.timestamp,
+                "yaw =", gimbal.yaw,
+                "pitch =", gimbal.pitch
+            )
 
-                usb_dev.hte.update()
+            usb_dev.hte.update()
 
-                print("Jetson pulse" ,usb_dev.hte.current_pulse - usb_dev.hte.start_pulse)
+            print(
+                "Jetson pulse",
+                usb_dev.hte.current_pulse - usb_dev.hte.start_pulse
+            )
 
     except KeyboardInterrupt:
         pass
+
     finally:
         usb_dev.close()
