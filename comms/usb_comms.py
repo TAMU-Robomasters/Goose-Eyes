@@ -33,15 +33,11 @@ class usb_comms:
         if self.dev.is_kernel_driver_active(self.interface):
             self.dev.detach_kernel_driver(self.interface)
 
-
         self.dev.set_configuration()
 
         cfg = self.dev.get_active_configuration()
 
-        intf = usb.util.find_descriptor(
-            cfg,
-            bInterfaceNumber=self.interface
-        )
+        intf = usb.util.find_descriptor(cfg, bInterfaceNumber=self.interface)
 
         if intf is None:
             raise RuntimeError(f"Interface {self.interface} not found")
@@ -50,20 +46,20 @@ class usb_comms:
 
         self.ep_out = usb.util.find_descriptor(
             intf,
-            custom_match=lambda e:
-                usb.util.endpoint_direction(e.bEndpointAddress)
-                == usb.util.ENDPOINT_OUT
+            custom_match=lambda e: (
+                usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT
                 and usb.util.endpoint_type(e.bmAttributes)
                 == usb.util.ENDPOINT_TYPE_BULK
+            ),
         )
 
         self.ep_in = usb.util.find_descriptor(
             intf,
-            custom_match=lambda e:
-                usb.util.endpoint_direction(e.bEndpointAddress)
-                == usb.util.ENDPOINT_IN
+            custom_match=lambda e: (
+                usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_IN
                 and usb.util.endpoint_type(e.bmAttributes)
                 == usb.util.ENDPOINT_TYPE_BULK
+            ),
         )
 
         if self.ep_out is None:
@@ -120,8 +116,7 @@ class usb_comms:
 
     def send_query(self, timestamp: int, request_number: int):
         packet = commStructs.QueryPacket(
-            timestamp=timestamp,
-            requestNumber=request_number
+            timestamp=timestamp, requestNumber=request_number
         )
 
         self.send_packet(packet)
@@ -182,11 +177,11 @@ class usb_comms:
             idx = self.rx_buffer.find(MAGIC)
 
             if idx >= 0:
-                self.rx_buffer = self.rx_buffer[idx + len(MAGIC):]
+                self.rx_buffer = self.rx_buffer[idx + len(MAGIC) :]
                 return
 
             if len(self.rx_buffer) > len(MAGIC) - 1:
-                self.rx_buffer = self.rx_buffer[-(len(MAGIC) - 1):]
+                self.rx_buffer = self.rx_buffer[-(len(MAGIC) - 1) :]
 
             remaining_time = deadline - time.monotonic()
 
@@ -221,8 +216,7 @@ class usb_comms:
                 return None
 
             payload = self.read_exact(
-                packet_class.SIZE,
-                timeout=int(remaining_time * 1000)
+                packet_class.SIZE, timeout=int(remaining_time * 1000)
             )
 
             remaining_time = deadline - time.monotonic()
@@ -232,10 +226,7 @@ class usb_comms:
                 return None
                 # raise TimeoutError("Timed out waiting for checksum")
 
-            received_checksum = self.read_exact(
-                1,
-                timeout=int(remaining_time * 1000)
-            )
+            received_checksum = self.read_exact(1, timeout=int(remaining_time * 1000))
             if not received_checksum:
                 print("Timed out waiting for checksum")
                 return None
@@ -252,7 +243,7 @@ class usb_comms:
                 calculated_checksum,
                 "got",
                 received_checksum,
-                "- resyncing..."
+                "- resyncing...",
             )
 
     def drain_rx(self):
@@ -269,32 +260,24 @@ class usb_comms:
             self.drain_rx()
 
         self.send_query(
-            timestamp=timestamp,
-            request_number=commStructs.REQUEST_GIMBAL_POS
+            timestamp=timestamp, request_number=commStructs.REQUEST_GIMBAL_POS
         )
 
-        return self.read_packet(
-            commStructs.GimbalPacket,
-            timeout=timeout
-        )
+        return self.read_packet(commStructs.GimbalPacket, timeout=timeout)
 
     def reset_start_pulse(self):
-        
+
         self.hte.start_pulse = None
         self.hte.start_time = None
 
         while self.hte.start_pulse is None:
-            self.send_query(
-                        timestamp=0,
-                        request_number=commStructs.REQUEST_RESET
-                    )
+            self.send_query(timestamp=0, request_number=commStructs.REQUEST_RESET)
             self.hte.reset_start_pulse()
 
         return self.hte.start_pulse, self.hte.start_time
 
     def close(self):
         usb.util.release_interface(self.dev, self.interface)
-
 
         usb.util.dispose_resources(self.dev)
 
@@ -303,12 +286,7 @@ if __name__ == "__main__":
     VID = 0x0483
     PID = 0x5740
 
-    usb_dev = usb_comms(
-        VID,
-        PID,
-        packet_size=64,
-        timeout=1000
-    )
+    usb_dev = usb_comms(VID, PID, packet_size=64, timeout=1000)
 
     print("starting ...")
 
@@ -332,10 +310,7 @@ if __name__ == "__main__":
 
             print("Jetson pulse", timestamp)
 
-            gimbal = usb_dev.query_gimbal(
-                timestamp=timestamp,
-                timeout=1000
-            )
+            gimbal = usb_dev.query_gimbal(timestamp=timestamp, timeout=1000)
 
             if gimbal is None:
                 print("Failed to receive gimbal data")
@@ -343,21 +318,20 @@ if __name__ == "__main__":
 
             print(
                 "Received gimbal:",
-                "timestamp =", gimbal.timestamp,
-                "yaw =", gimbal.yaw,
-                "pitch =", gimbal.pitch
+                "timestamp =",
+                gimbal.timestamp,
+                "yaw =",
+                gimbal.yaw,
+                "pitch =",
+                gimbal.pitch,
             )
             time.sleep(0.05)  # Small delay to prevent overwhelming the USB interface
 
     except KeyboardInterrupt:
         print("\nCtrl+C received.")
 
-        usb_dev.send_query(
-            timestamp=0,
-            request_number=commStructs.REQUEST_RESET
-        )
+        usb_dev.send_query(timestamp=0, request_number=commStructs.REQUEST_RESET)
         time.sleep(0.05)
-
 
     finally:
         usb_dev.close()

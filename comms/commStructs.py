@@ -5,6 +5,7 @@ from dataclasses import dataclass
 REQUEST_RESET = 0
 REQUEST_GIMBAL_POS = 1
 
+
 @dataclass
 class QueryPacket:
     """
@@ -17,6 +18,7 @@ class QueryPacket:
 
     Total size: 5 bytes
     """
+
     timestamp: int
     requestNumber: int
 
@@ -24,25 +26,16 @@ class QueryPacket:
     SIZE = struct.calcsize(_FORMAT)
 
     def pack(self) -> bytes:
-        return struct.pack(
-            self._FORMAT,
-            self.timestamp,
-            self.requestNumber
-        )
+        return struct.pack(self._FORMAT, self.timestamp, self.requestNumber)
 
     @classmethod
     def unpack(cls, data: bytes) -> "QueryPacket":
         if len(data) != cls.SIZE:
-            raise ValueError(
-                f"QueryPacket requires {cls.SIZE} bytes, got {len(data)}"
-            )
+            raise ValueError(f"QueryPacket requires {cls.SIZE} bytes, got {len(data)}")
 
         timestamp, requestNumber = struct.unpack(cls._FORMAT, data)
 
-        return cls(
-            timestamp=timestamp,
-            requestNumber=requestNumber
-        )
+        return cls(timestamp=timestamp, requestNumber=requestNumber)
 
 
 @dataclass
@@ -58,6 +51,7 @@ class GimbalPacket:
 
     Total size: 12 bytes
     """
+
     timestamp: int
     yaw: float
     pitch: float
@@ -66,24 +60,13 @@ class GimbalPacket:
     SIZE = struct.calcsize(_FORMAT)
 
     def pack(self) -> bytes:
-        return struct.pack(
-            self._FORMAT,
-            self.timestamp,
-            self.yaw,
-            self.pitch
-        )
+        return struct.pack(self._FORMAT, self.timestamp, self.yaw, self.pitch)
 
     @classmethod
     def unpack(cls, data: bytes) -> "GimbalPacket":
         if len(data) != cls.SIZE:
-            raise ValueError(
-                f"GimbalPacket requires {cls.SIZE} bytes, got {len(data)}"
-            )
+            raise ValueError(f"GimbalPacket requires {cls.SIZE} bytes, got {len(data)}")
 
         timestamp, yaw, pitch = struct.unpack(cls._FORMAT, data)
 
-        return cls(
-            timestamp=timestamp,
-            yaw=yaw,
-            pitch=pitch
-        )
+        return cls(timestamp=timestamp, yaw=yaw, pitch=pitch)

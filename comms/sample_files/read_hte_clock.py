@@ -84,7 +84,6 @@ def main():
     start_time = time.perf_counter_ns()
     frequency_list = []
     for event in read_events():
-
         if last_ts is not None:
             period_ns = event.timestamp_ns - last_ts
             freq_hz = 1_000_000_000.0 / period_ns if period_ns > 0 else 0.0
