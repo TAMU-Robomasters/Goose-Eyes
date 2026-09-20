@@ -6,6 +6,13 @@ import hteClock
 import commStructs
 
 
+MAGIC = b"\x69\x42"
+
+
+def checksum8(data: bytes) -> int:
+    return sum(data) & 0xFF
+
+
 class usb_comms:
     def __init__(self, vid, pid, packet_size=64, interface=None, timeout=1000):
         self.packet_size = packet_size
@@ -19,13 +26,11 @@ class usb_comms:
                 f"USB device not found: VID=0x{vid:04x}, PID=0x{pid:04x}"
             )
 
-        # Pick an interface with bulk IN and bulk OUT endpoints.
         if interface is None:
             interface = self.find_bulk_interface()
 
         self.interface = interface
 
-        # Detach kernel driver if Linux claimed this interface.
         try:
             if self.dev.is_kernel_driver_active(self.interface):
                 self.dev.detach_kernel_driver(self.interface)
@@ -73,9 +78,6 @@ class usb_comms:
         self.hte = hteClock.HTEClockEvent("/dev/hte_clock0")
 
     def find_bulk_interface(self):
-        """
-        Find the first USB interface with one bulk IN and one bulk OUT endpoint.
-        """
         cfg = self.dev[0]
 
         for intf in cfg:
@@ -98,27 +100,28 @@ class usb_comms:
         raise RuntimeError("No bulk IN/OUT interface found")
 
     def send_raw(self, data: bytes):
-        """
-        Send raw bytes over bulk OUT.
-        """
         if not isinstance(data, bytes):
             raise TypeError("send_raw expects bytes")
 
-        self.ep_out.write(data, timeout=self.timeout)
+        total_sent = 0
+
+        while total_sent < len(data):
+            sent = self.ep_out.write(data[total_sent:], timeout=self.timeout)
+
+            if sent is None:
+                sent = len(data) - total_sent
+
+            if sent <= 0:
+                raise IOError("USB write made no progress")
+
+            total_sent += sent
 
     def send_packet(self, packet):
-        """
-        Send a packet object that has a pack() method.
-        """
-        self.send_raw(packet.pack())
+        payload = packet.pack()
+        framed_packet = MAGIC + payload + bytes([checksum8(payload)])
+        self.send_raw(framed_packet)
 
     def send_query(self, timestamp: int, request_number: int):
-        """
-        Send a QueryPacket to the dev board.
-
-        The dev board should decode this and only respond if the request
-        requires a response.
-        """
         packet = commStructs.QueryPacket(
             timestamp=timestamp,
             requestNumber=request_number
@@ -127,15 +130,6 @@ class usb_comms:
         self.send_packet(packet)
 
     def receive_chunk(self, timeout=None):
-        """
-        Read one USB chunk from bulk IN.
-
-        This may return:
-            - empty bytes on timeout
-            - part of a packet
-            - one full packet
-            - multiple packets
-        """
         if timeout is None:
             timeout = self.timeout
 
@@ -144,7 +138,6 @@ class usb_comms:
             return bytes(data)
 
         except usb.core.USBError as e:
-            # Timeout is normal if no data arrived.
             if getattr(e, "errno", None) == 110:
                 return b""
 
@@ -154,16 +147,6 @@ class usb_comms:
             raise
 
     def read_exact(self, num_bytes: int, timeout=None) -> bytes:
-        """
-        Read exactly num_bytes from USB.
-
-        This function uses self.rx_buffer so it handles cases where USB gives:
-            - less than one packet
-            - exactly one packet
-            - more than one packet
-
-        Raises TimeoutError if not enough bytes arrive before timeout.
-        """
         if timeout is None:
             timeout = self.timeout
 
@@ -173,13 +156,14 @@ class usb_comms:
             remaining_time = deadline - time.monotonic()
 
             if remaining_time <= 0:
+                partial_len = len(self.rx_buffer)
+                self.rx_buffer = b""
                 raise TimeoutError(
                     f"Timed out waiting for {num_bytes} bytes. "
-                    f"Only received {len(self.rx_buffer)} bytes."
+                    f"Only received {partial_len} bytes."
                 )
 
             chunk_timeout_ms = max(1, int(remaining_time * 1000))
-
             chunk = self.receive_chunk(timeout=chunk_timeout_ms)
 
             if chunk:
@@ -190,23 +174,81 @@ class usb_comms:
 
         return data
 
-    def read_packet(self, packet_class, timeout=None):
-        """
-        Read one fixed-size packet and unpack it.
+    def wait_for_magic(self, timeout=None):
+        if timeout is None:
+            timeout = self.timeout
 
-        packet_class must have:
-            SIZE
-            unpack(data)
-        """
-        data = self.read_exact(packet_class.SIZE, timeout=timeout)
-        return packet_class.unpack(data)
+        deadline = time.monotonic() + timeout / 1000.0
+
+        while True:
+            idx = self.rx_buffer.find(MAGIC)
+
+            if idx >= 0:
+                self.rx_buffer = self.rx_buffer[idx + len(MAGIC):]
+                return
+
+            if len(self.rx_buffer) > len(MAGIC) - 1:
+                self.rx_buffer = self.rx_buffer[-(len(MAGIC) - 1):]
+
+            remaining_time = deadline - time.monotonic()
+
+            if remaining_time <= 0:
+                raise TimeoutError("Timed out waiting for packet magic")
+
+            chunk_timeout_ms = max(1, int(remaining_time * 1000))
+            chunk = self.receive_chunk(timeout=chunk_timeout_ms)
+
+            if chunk:
+                self.rx_buffer += chunk
+
+    def read_packet(self, packet_class, timeout=None):
+        if timeout is None:
+            timeout = self.timeout
+
+        deadline = time.monotonic() + timeout / 1000.0
+
+        while True:
+            remaining_time = deadline - time.monotonic()
+
+            if remaining_time <= 0:
+                raise TimeoutError("Timed out waiting for valid framed packet")
+
+            self.wait_for_magic(timeout=int(remaining_time * 1000))
+
+            remaining_time = deadline - time.monotonic()
+
+            if remaining_time <= 0:
+                raise TimeoutError("Timed out after packet magic")
+
+            payload = self.read_exact(
+                packet_class.SIZE,
+                timeout=int(remaining_time * 1000)
+            )
+
+            remaining_time = deadline - time.monotonic()
+
+            if remaining_time <= 0:
+                raise TimeoutError("Timed out waiting for checksum")
+
+            received_checksum = self.read_exact(
+                1,
+                timeout=int(remaining_time * 1000)
+            )[0]
+
+            calculated_checksum = checksum8(payload)
+
+            if received_checksum == calculated_checksum:
+                return packet_class.unpack(payload)
+
+            print(
+                "Bad checksum. Expected",
+                calculated_checksum,
+                "got",
+                received_checksum,
+                "- resyncing..."
+            )
 
     def drain_rx(self):
-        """
-        Clear any pending/stale USB input data.
-
-        Useful during startup or error recovery.
-        """
         self.rx_buffer = b""
 
         while True:
@@ -216,17 +258,6 @@ class usb_comms:
                 break
 
     def query_gimbal(self, timestamp=0, timeout=None, flush_stale=False):
-        """
-        Query/receive transaction for gimbal position.
-
-        Flow:
-
-            Jetson -> dev board:
-                QueryPacket(timestamp, REQUEST_GIMBAL_POS)
-
-            dev board -> Jetson:
-                GimbalPacket(timestamp, yaw, pitch)
-        """
         if flush_stale:
             self.drain_rx()
 
@@ -241,20 +272,16 @@ class usb_comms:
         )
 
     def reset_start_pulse(self):
-        """
-        Send reset request and reset HTE start pulse.
+        
+        self.hte.start_pulse = None
+        self.hte.start_time = None
 
-        This assumes REQUEST_RESET is a command that does not return data.
-
-        If your firmware sends back an acknowledgment packet for reset,
-        then you should add a read_packet() call here for that ack packet.
-        """
-        self.send_query(
-            timestamp=0,
-            request_number=commStructs.REQUEST_RESET
-        )
-
-        self.hte.reset_start_pulse()
+        while self.hte.start_pulse is None:
+            self.send_query(
+                        timestamp=0,
+                        request_number=commStructs.REQUEST_RESET
+                    )
+            self.hte.reset_start_pulse()
 
         return self.hte.start_pulse, self.hte.start_time
 
@@ -268,7 +295,6 @@ class usb_comms:
 
 
 if __name__ == "__main__":
-    # Replace these with your actual VID/PID from lsusb.
     VID = 0x0483
     PID = 0x5740
 
@@ -283,20 +309,27 @@ if __name__ == "__main__":
 
     try:
         usb_dev.drain_rx()
+        time.sleep(0.5)
 
         start_pulse, start_time = usb_dev.reset_start_pulse()
 
+        time.sleep(1)
+
         print("Start pulse:", start_pulse)
         print("Start time:", start_time)
-        # Optional: clear anything stale after reset.
+
+        usb_dev.drain_rx()
 
         while True:
             try:
                 usb_dev.hte.update()
-                print("Jetson pulse",usb_dev.hte.current_pulse - usb_dev.hte.start_pulse
-                )
+
+                timestamp = usb_dev.hte.current_pulse - usb_dev.hte.start_pulse
+
+                print("Jetson pulse", timestamp)
+
                 gimbal = usb_dev.query_gimbal(
-                    timestamp=usb_dev.hte.current_pulse - usb_dev.hte.start_pulse,
+                    timestamp=timestamp,
                     timeout=1000
                 )
 
@@ -306,13 +339,24 @@ if __name__ == "__main__":
                     "yaw =", gimbal.yaw,
                     "pitch =", gimbal.pitch
                 )
-                time.sleep(1)
+                time.sleep(0.05)  # Small delay to prevent overwhelming the USB interface
+
             except Exception as e:
                 print("Error during communication:", e)
-
+                usb_dev.drain_rx()
 
     except KeyboardInterrupt:
-        pass
+        print("\nCtrl+C received.")
+
+        try:
+            usb_dev.send_query(
+                timestamp=0,
+                request_number=commStructs.REQUEST_RESET
+            )
+            time.sleep(0.05)
+        except Exception as e:
+            print("Could not send reset request:", e)
 
     finally:
         usb_dev.close()
+        print("done")

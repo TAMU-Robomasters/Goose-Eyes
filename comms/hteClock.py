@@ -1,6 +1,7 @@
 import os
 import select
 import struct
+import time
 
 
 class HTEClockEvent:
@@ -52,16 +53,22 @@ class HTEClockEvent:
         Sets the start pulse and start time once detected.
         """
         last_timestamp = None
+
+        start_timeout = time.time()
+
         while self.start_pulse is None:
             self.update()
             if last_timestamp is not None:
                 delta = self.current_timestamp - last_timestamp
-                print("Delta:", delta)
                 if delta > 0.25e9:
                     self.start_pulse = self.current_pulse + 1
                     self.start_time = self.current_timestamp
 
             last_timestamp = self.current_timestamp
+
+            if time.time() - start_timeout > 3:  # 5-second timeout
+                print("Timeout waiting for start pulse.")
+                break
 
     def close(self):
         if self.dev is not None:
