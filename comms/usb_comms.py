@@ -1,10 +1,9 @@
 import time
+
+import commStructs
+import hteClock
 import usb.core
 import usb.util
-
-import hteClock
-import commStructs
-
 
 MAGIC = b"\x69\x42"
 
@@ -31,11 +30,9 @@ class usb_comms:
 
         self.interface = interface
 
-        try:
-            if self.dev.is_kernel_driver_active(self.interface):
-                self.dev.detach_kernel_driver(self.interface)
-        except Exception:
-            pass
+        if self.dev.is_kernel_driver_active(self.interface):
+            self.dev.detach_kernel_driver(self.interface)
+
 
         self.dev.set_configuration()
 
@@ -112,7 +109,7 @@ class usb_comms:
                 sent = len(data) - total_sent
 
             if sent <= 0:
-                raise IOError("USB write made no progress")
+                raise OSError("USB write made no progress")
 
             total_sent += sent
 
@@ -158,10 +155,11 @@ class usb_comms:
             if remaining_time <= 0:
                 partial_len = len(self.rx_buffer)
                 self.rx_buffer = b""
-                raise TimeoutError(
+                print(
                     f"Timed out waiting for {num_bytes} bytes. "
                     f"Only received {partial_len} bytes."
                 )
+                return None
 
             chunk_timeout_ms = max(1, int(remaining_time * 1000))
             chunk = self.receive_chunk(timeout=chunk_timeout_ms)
@@ -193,7 +191,8 @@ class usb_comms:
             remaining_time = deadline - time.monotonic()
 
             if remaining_time <= 0:
-                raise TimeoutError("Timed out waiting for packet magic")
+                print("Timed out waiting for packet magic")
+                return
 
             chunk_timeout_ms = max(1, int(remaining_time * 1000))
             chunk = self.receive_chunk(timeout=chunk_timeout_ms)
@@ -218,7 +217,8 @@ class usb_comms:
             remaining_time = deadline - time.monotonic()
 
             if remaining_time <= 0:
-                raise TimeoutError("Timed out after packet magic")
+                print("Timed out after packet magic")
+                return None
 
             payload = self.read_exact(
                 packet_class.SIZE,
@@ -228,12 +228,19 @@ class usb_comms:
             remaining_time = deadline - time.monotonic()
 
             if remaining_time <= 0:
-                raise TimeoutError("Timed out waiting for checksum")
+                print("Timed out waiting for checksum")
+                return None
+                # raise TimeoutError("Timed out waiting for checksum")
 
             received_checksum = self.read_exact(
                 1,
                 timeout=int(remaining_time * 1000)
-            )[0]
+            )
+            if not received_checksum:
+                print("Timed out waiting for checksum")
+                return None
+
+            received_checksum = received_checksum[0]
 
             calculated_checksum = checksum8(payload)
 
@@ -286,10 +293,8 @@ class usb_comms:
         return self.hte.start_pulse, self.hte.start_time
 
     def close(self):
-        try:
-            usb.util.release_interface(self.dev, self.interface)
-        except Exception:
-            pass
+        usb.util.release_interface(self.dev, self.interface)
+
 
         usb.util.dispose_resources(self.dev)
 
@@ -321,41 +326,38 @@ if __name__ == "__main__":
         usb_dev.drain_rx()
 
         while True:
-            try:
-                usb_dev.hte.update()
+            usb_dev.hte.update()
 
-                timestamp = usb_dev.hte.current_pulse - usb_dev.hte.start_pulse
+            timestamp = usb_dev.hte.current_pulse - usb_dev.hte.start_pulse
 
-                print("Jetson pulse", timestamp)
+            print("Jetson pulse", timestamp)
 
-                gimbal = usb_dev.query_gimbal(
-                    timestamp=timestamp,
-                    timeout=1000
-                )
+            gimbal = usb_dev.query_gimbal(
+                timestamp=timestamp,
+                timeout=1000
+            )
 
-                print(
-                    "Received gimbal:",
-                    "timestamp =", gimbal.timestamp,
-                    "yaw =", gimbal.yaw,
-                    "pitch =", gimbal.pitch
-                )
-                time.sleep(0.05)  # Small delay to prevent overwhelming the USB interface
+            if gimbal is None:
+                print("Failed to receive gimbal data")
+                continue
 
-            except Exception as e:
-                print("Error during communication:", e)
-                usb_dev.drain_rx()
+            print(
+                "Received gimbal:",
+                "timestamp =", gimbal.timestamp,
+                "yaw =", gimbal.yaw,
+                "pitch =", gimbal.pitch
+            )
+            time.sleep(0.05)  # Small delay to prevent overwhelming the USB interface
 
     except KeyboardInterrupt:
         print("\nCtrl+C received.")
 
-        try:
-            usb_dev.send_query(
-                timestamp=0,
-                request_number=commStructs.REQUEST_RESET
-            )
-            time.sleep(0.05)
-        except Exception as e:
-            print("Could not send reset request:", e)
+        usb_dev.send_query(
+            timestamp=0,
+            request_number=commStructs.REQUEST_RESET
+        )
+        time.sleep(0.05)
+
 
     finally:
         usb_dev.close()

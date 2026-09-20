@@ -1,10 +1,9 @@
-#!/usr/bin/env python3
-
 import os
+import select
 import statistics
 import struct
-import select
 import time
+
 import matplotlib.pyplot as plt
 
 DEV = "/dev/hte_clock0"
@@ -85,7 +84,6 @@ def main():
     start_time = time.perf_counter_ns()
     frequency_list = []
     for event in read_events():
-        now_mono_ns = time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW)
 
         if last_ts is not None:
             period_ns = event.timestamp_ns - last_ts
@@ -130,7 +128,6 @@ def main():
         plt.grid(True)
         plt.savefig("frequency_vs_pulse.png", dpi=150)
         plt.close()
-    return
 
 
 if __name__ == "__main__":

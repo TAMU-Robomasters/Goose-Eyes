@@ -1,7 +1,6 @@
 import struct
 from dataclasses import dataclass
 
-
 # Request numbers
 REQUEST_RESET = 0
 REQUEST_GIMBAL_POS = 1
