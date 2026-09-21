@@ -11,7 +11,7 @@
       
       
       
-        <link rel="prev" href="../api/python/second_frame_displayer/">
+        <link rel="prev" href="../api/python/camera_sub/">
       
       
       
@@ -623,10 +623,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -679,14 +675,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../dora/nodes/camera_capture/" class="md-nav__link">
+      <a href="../dora/nodes/camera_pub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    camera_capture
+    camera_pub
   
 
     
@@ -707,70 +703,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../dora/nodes/second_frame_displayer/" class="md-nav__link">
+      <a href="../dora/nodes/camera_sub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    second_frame_displayer
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../dora/nodes/rerun_image_test/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    rerun_image_test
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../dora/nodes/rerun_test/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    rerun_test
+    camera_sub
   
 
     
@@ -875,10 +815,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -931,14 +867,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/python/camera_capture/" class="md-nav__link">
+      <a href="../api/python/camera_pub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    camera_capture
+    camera_pub
   
 
     
@@ -959,70 +895,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/python/rerun_image_test/" class="md-nav__link">
+      <a href="../api/python/camera_sub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    rerun_image_test
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../api/python/rerun_test/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    rerun_test
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../api/python/second_frame_displayer/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    second_frame_displayer
+    camera_sub
   
 
     
@@ -1200,17 +1080,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#the-docs-update-workflow-claude-code-skill" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The docs-update workflow (Claude Code skill)
-      
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -1269,17 +1138,6 @@
     <span class="md-ellipsis">
       
         When you change…
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-docs-update-workflow-claude-code-skill" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The docs-update workflow (Claude Code skill)
       
     </span>
   </a>
@@ -1352,17 +1210,6 @@ changes, so a <code>--strict</code> build is reproducible without dora installed
 for a decision you didn't make — a <code>TODO: rationale</code> is more useful than an invented one. Docstrings
 are Google style. Repo files that aren't pages get linked with a full GitHub URL, since MkDocs only
 resolves links inside <code>docs/</code>.</p>
-<h2 id="the-docs-update-workflow-claude-code-skill">The docs-update workflow (Claude Code skill)<a class="headerlink" href="#the-docs-update-workflow-claude-code-skill" title="Permanent link">&para;</a></h2>
-<p>For a batch of merged changes there's a Claude Code skill, <code>docs-update</code>, that does the judgment work
-this page describes: it diffs the repo since the last docs pass (<code>docs/.last-docs-commit</code>), works out
-which pages are affected, updates the contract tables, runs <code>pixi run docs</code> and fixes what <code>--strict</code>
-complains about, then prints a report (pages changed, new TODOs, functions missing docstrings, things it
-wasn't sure about). It <strong>does not commit</strong> and does not edit node source — you review the diff.</p>
-<p>It lives at <code>.claude/skills/docs-update/</code> on your machine and is deliberately <em>not</em> tracked
-(<code>.claude/</code> is gitignored), so it's a personal tool, not part of the repo. Run it in Claude Code with
-<code>/docs-update</code> from the repo root, typically after merging to <code>main</code>. If you'd rather do the pass by
-hand, the table above is the whole checklist; just update <code>docs/.last-docs-commit</code> to <code>HEAD</code> afterwards
-so the next skill run starts from the right place.</p>
 
 
 

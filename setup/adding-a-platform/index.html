@@ -505,24 +505,6 @@
         
       
       
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Adding a platform
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -539,47 +521,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Steps
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#things-to-know" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Things to know
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
       
     </li>
   
@@ -699,10 +640,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -755,14 +692,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../dora/nodes/camera_capture/" class="md-nav__link">
+      <a href="../../dora/nodes/camera_pub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    camera_capture
+    camera_pub
   
 
     
@@ -783,70 +720,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../dora/nodes/second_frame_displayer/" class="md-nav__link">
+      <a href="../../dora/nodes/camera_sub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    second_frame_displayer
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../dora/nodes/rerun_image_test/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    rerun_image_test
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../dora/nodes/rerun_test/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    rerun_test
+    camera_sub
   
 
     
@@ -951,10 +832,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -1007,14 +884,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/python/camera_capture/" class="md-nav__link">
+      <a href="../../api/python/camera_pub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    camera_capture
+    camera_pub
   
 
     
@@ -1035,70 +912,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/python/rerun_image_test/" class="md-nav__link">
+      <a href="../../api/python/camera_sub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    rerun_image_test
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/python/rerun_test/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    rerun_test
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/python/second_frame_displayer/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    second_frame_displayer
+    camera_sub
   
 
     
@@ -1238,36 +1059,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Steps
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#things-to-know" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Things to know
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -1287,55 +1078,43 @@
 
 
 <h1 id="adding-a-development-platform">Adding a development platform<a class="headerlink" href="#adding-a-development-platform" title="Permanent link">&para;</a></h1>
-<p>The Jetson is the main target and <code>osx-arm64</code> is the only dev platform declared so far. Adding another
-(say <code>linux-64</code> for an x86 laptop) is mostly a <code>pixi.toml</code> exercise; these are the things that bite.</p>
-<h2 id="steps">Steps<a class="headerlink" href="#steps" title="Permanent link">&para;</a></h2>
+<p>The Jetson is the main target and <code>osx-arm64</code> is the only dev platform so far. Adding another (say
+<code>linux-64</code> for an x86 laptop) is a <code>pixi.toml</code> change; pixi's
+<a href="https://pixi.sh/latest/workspace/multi_platform_configuration/">multi-platform docs</a> cover the
+mechanics.</p>
 <ol>
-<li><strong>Declare it.</strong> Add the platform string to <code>platforms = [...]</code> in <code>pixi.toml</code>. Plain strings
-   (<code>"linux-64"</code>, <code>"win-64"</code>, <code>"osx-64"</code>) are fine for laptops; the Jetson entry is a <em>named</em> platform
-   (<code>{ name = "jetson", platform = "linux-aarch64", glibc = "2.39" }</code>) only because it has to pin the
-   glibc a JetPack board provides. Don't copy that pattern unless you also need to refuse installs on
-   the wrong OS version.</li>
-<li><strong>Re-solve.</strong> <code>pixi lock</code> solves the lock for every platform, so this is where you find out whether
-   each dependency exists for the new one. Do it on any machine — the solve doesn't need the target OS.</li>
+<li><strong>Declare it</strong> — add the platform string to <code>platforms = [...]</code> in <code>pixi.toml</code>
+   (<code>"linux-64"</code>, <code>"win-64"</code>, <code>"osx-64"</code>). Plain strings are fine for laptops; only the Jetson needs
+   the named-platform form, because it pins a glibc.</li>
 <li>
-<p><strong>Add substitutes.</strong> Anything the Jetson gets from JetPack (OpenCV, TensorRT) has to come from
-   somewhere on a laptop. Mirror what <code>[target.osx-arm64.*]</code> does:</p>
+<p><strong>Add substitutes</strong> for what the Jetson gets from JetPack. Copy the <code>osx-arm64</code> target tables:</p>
 <div class="highlight"><pre><span></span><code><span class="k">[target.linux-64.dependencies]</span>
 <span class="n">opencv</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"&gt;=4.13.0,&lt;5"</span>
 
 <span class="k">[target.linux-64.pypi-dependencies]</span>
 <span class="n">rerun-sdk</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"&gt;=0.38.1, &lt;0.39"</span>
 </code></pre></div>
-<p>Keep the <code>rerun-sdk</code> pin equal to <code>RERUN_VERSION</code> in <code>utils/install_jetson_rerun.sh</code>, so every
-platform speaks the same rerun wire format.
-4. <strong>Install and run the smoke test:</strong></p>
-<div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>install
-pixi<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import cv2, dora, rerun; print(cv2.__version__, rerun.__version__)"</span>
-pixi<span class="w"> </span>run<span class="w"> </span>dora-demo<span class="w">        </span><span class="c1"># needs a webcam; see the camera-index note on the dora page</span>
+<p>Keep the <code>rerun-sdk</code> pin equal to <code>RERUN_VERSION</code> in <code>utils/install_jetson_rerun.sh</code>.
+3. <strong>Re-solve and install</strong> — <a href="https://pixi.sh/latest/reference/cli/pixi/lock/"><code>pixi lock</code></a> solves
+   the lock for every platform (this is where you find out if a dependency doesn't exist for the new
+   one; ROS 2 from RoboStack is the likely culprit), then <code>pixi install</code>. Commit the whole <code>pixi.lock</code>.
+4. <strong>Smoke test:</strong></p>
+<div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import cv2, dora, rerun, rclpy; print(cv2.__version__, rerun.__version__)"</span>
+pixi<span class="w"> </span>run<span class="w"> </span>dora<span class="w"> </span>run<span class="w"> </span>goose-eyes/dataflows/dataflow.yml<span class="w">    </span><span class="c1"># needs a webcam</span>
 </code></pre></div>
 </li>
 </ol>
-<h2 id="things-to-know">Things to know<a class="headerlink" href="#things-to-know" title="Permanent link">&para;</a></h2>
+<p>Things to know:</p>
 <ul>
-<li><strong>Target sections don't merge with the workspace ones for activation.</strong> A <code>[target.&lt;p&gt;.activation]</code>
-  <code>scripts</code> list <em>replaces</em> the top-level list. Right now only the Jetson has activation scripts, so
-  there is nothing to repeat, but if a shared script is ever added at workspace level, every target that
-  declares its own list must include it too.</li>
-<li><strong><code>[dependencies]</code> is for things that resolve everywhere.</strong> If a package only exists for some
-  platforms, it goes in a target section for each platform that has it — a package missing on any
-  declared platform fails the whole solve.</li>
-<li><strong>No CUDA on laptops, and none declared on the Jetson either.</strong> Don't add <code>cuda = "…"</code> to a platform
-  entry; the Jetson gets GPU libraries from JetPack, laptops get none (see
-  <a href="../platforms/">Platforms</a>, "Why CUDA isn't declared").</li>
-<li><strong>The lock is per-platform but one file.</strong> A change to one target section re-solves only that
-  platform's part, but commit the whole <code>pixi.lock</code> — partial lock edits are how two people end up with
-  different envs.</li>
-<li><strong>Laptops are partial support by design.</strong> GStreamer NVIDIA plugins, TensorRT, anything hardware-bound
-  will never run there. Document the gap in <a href="../platforms/">Platforms</a> instead of working around it; the
-  Jetson (<code>ssh juice</code>) is where things get verified before they count as working.</li>
-<li><strong>Windows</strong> is untested. Expect the activation scripts (bash) and anything using <code>/dev/video*</code> to need
-  work; WSL2 is the lower-effort route if someone needs it.</li>
+<li><code>[dependencies]</code> is for packages that exist on <em>every</em> declared platform; anything else goes in a
+  <code>[target.&lt;platform&gt;.*]</code> table, or the whole solve fails.</li>
+<li>A <code>[target.&lt;platform&gt;.activation]</code> <code>scripts</code> list <em>replaces</em> the workspace-level one rather than
+  adding to it. Only the Jetson has activation scripts today.</li>
+<li>Don't declare <code>cuda</code> on any platform (see <a href="../platforms/">Platforms</a>).</li>
+<li>Laptops are partial support by design: anything hardware-bound (NVIDIA GStreamer, TensorRT) won't run
+  there. Note the gap in <a href="../platforms/">Platforms</a> rather than working around it.</li>
+<li>Windows is untested; the activation scripts are bash and cameras are <code>/dev/video*</code>. WSL2 is the
+  lower-effort route.</li>
 </ul>
 
 

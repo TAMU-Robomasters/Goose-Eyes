@@ -692,10 +692,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -748,14 +744,14 @@
   
   
     <li class="md-nav__item">
-      <a href="dora/nodes/camera_capture/" class="md-nav__link">
+      <a href="dora/nodes/camera_pub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    camera_capture
+    camera_pub
   
 
     
@@ -776,70 +772,14 @@
   
   
     <li class="md-nav__item">
-      <a href="dora/nodes/second_frame_displayer/" class="md-nav__link">
+      <a href="dora/nodes/camera_sub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    second_frame_displayer
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="dora/nodes/rerun_image_test/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    rerun_image_test
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="dora/nodes/rerun_test/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    rerun_test
+    camera_sub
   
 
     
@@ -944,10 +884,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -1000,14 +936,14 @@
   
   
     <li class="md-nav__item">
-      <a href="api/python/camera_capture/" class="md-nav__link">
+      <a href="api/python/camera_pub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    camera_capture
+    camera_pub
   
 
     
@@ -1028,70 +964,14 @@
   
   
     <li class="md-nav__item">
-      <a href="api/python/rerun_image_test/" class="md-nav__link">
+      <a href="api/python/camera_sub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    rerun_image_test
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="api/python/rerun_test/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    rerun_test
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="api/python/second_frame_displayer/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    second_frame_displayer
+    camera_sub
   
 
     
@@ -1287,16 +1167,14 @@ platform is the Jetson Orin; see <a href="setup/">Setup</a> for getting an envir
 (inputs, outputs, message types, rates). Generated API reference sits underneath in
 <a href="api/">API Reference</a>.</p>
 <h2 id="system-map">System map<a class="headerlink" href="#system-map" title="Permanent link">&para;</a></h2>
-<p>Everything that runs today lives in the dora dataflow. A ROS 2 / Nav2 navigation stack exists in a
-separate repo and will be brought in later; a dora ↔ ROS 2 bridge is planned but nothing in this repo
-depends on it yet.</p>
+<p>Everything that runs today is one dora dataflow, the camera pub/sub demo. ROS 2 Jazzy is installed in
+the environment (via RoboStack) for the navigation work to come, but nothing in this repo uses it yet.</p>
 <pre class="mermaid"><code>flowchart LR
   subgraph dora["dora dataflow (goose-eyes/)"]
     direction LR
-    camera["camera_capture"] -- image --&gt; display["second_frame_displayer"]
-    camera -- image --&gt; rerun["rerun_image_test"]
+    camera["camera_pub"] -- image --&gt; display["camera_sub"]
   end
-  subgraph ros["ROS 2 / Nav2 (planned, not in this repo)"]
+  subgraph ros["ROS 2 Jazzy (in the env, unused so far)"]
     nav["Nav2"]
   end
   dora -. "planned bridge" .-&gt; ros</code></pre>
@@ -1311,11 +1189,11 @@ depends on it yet.</p>
 <tbody>
 <tr>
 <td><a href="setup/">Setup</a></td>
-<td>pixi install, the <code>jetson</code> platform, adding a dev platform</td>
+<td>install, how pixi works, the <code>jetson</code> platform, adding a dev platform</td>
 </tr>
 <tr>
 <td><a href="dora/">dora</a></td>
-<td>running the demos, <a href="dora/architecture/">architecture</a> (generated graphs), per-node contracts</td>
+<td>running the demo, <a href="dora/architecture/">architecture</a> (generated graph), per-node contracts</td>
 </tr>
 <tr>
 <td><a href="api/">API Reference</a></td>

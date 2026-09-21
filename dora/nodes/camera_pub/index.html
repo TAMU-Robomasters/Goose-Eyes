@@ -11,10 +11,10 @@
       
       
       
-        <link rel="prev" href="../camera_capture/">
+        <link rel="prev" href="../../architecture/">
       
       
-        <link rel="next" href="../rerun_image_test/">
+        <link rel="next" href="../camera_sub/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>second_frame_displayer - Goose-Eyes</title>
+        <title>camera_pub - Goose-Eyes</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#second_frame_displayer" class="md-skip">
+        <a href="#camera_pub" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              second_frame_displayer
+              camera_pub
             
           </span>
         </div>
@@ -632,10 +632,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -688,34 +684,6 @@
                 
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../camera_capture/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    camera_capture
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -735,7 +703,7 @@
   <span class="md-ellipsis">
     
   
-    second_frame_displayer
+    camera_pub
   
 
     
@@ -753,7 +721,7 @@
   <span class="md-ellipsis">
     
   
-    second_frame_displayer
+    camera_pub
   
 
     
@@ -816,42 +784,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../rerun_image_test/" class="md-nav__link">
+      <a href="../camera_sub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    rerun_image_test
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../rerun_test/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    rerun_test
+    camera_sub
   
 
     
@@ -956,10 +896,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -1012,14 +948,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api/python/camera_capture/" class="md-nav__link">
+      <a href="../../../api/python/camera_pub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    camera_capture
+    camera_pub
   
 
     
@@ -1040,70 +976,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api/python/rerun_image_test/" class="md-nav__link">
+      <a href="../../../api/python/camera_sub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    rerun_image_test
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../api/python/rerun_test/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    rerun_test
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../api/python/second_frame_displayer/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    second_frame_displayer
+    camera_sub
   
 
     
@@ -1291,31 +1171,33 @@
   
 
 
-<h1 id="second_frame_displayer"><code>second_frame_displayer</code><a class="headerlink" href="#second_frame_displayer" title="Permanent link">&para;</a></h1>
-<p><code>goose-eyes/nodes/second_frame_displayer.py</code> — sink that reshapes the frame from its <code>shape</code> metadata
-and shows it with <code>cv2.imshow</code>. <code>dataflow.yml</code> runs five instances (<code>displayer</code> … <code>displayer5</code>),
-<code>rerun-test.yml</code> one.</p>
+<h1 id="camera_pub"><code>camera_pub</code><a class="headerlink" href="#camera_pub" title="Permanent link">&para;</a></h1>
+<p><code>goose-eyes/nodes/camera_pub.py</code> — the source node: reads a webcam with OpenCV, resizes to 640×480,
+publishes each frame and shows it in a preview window. <code>q</code> in that window stops it. Runs as <code>camera</code>
+in <code>dataflow.yml</code>.</p>
 <h2 id="inputs">Inputs<a class="headerlink" href="#inputs" title="Permanent link">&para;</a></h2>
+<p>None.</p>
+<h2 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>input</th>
+<th>output</th>
 <th>type</th>
-<th>metadata used</th>
+<th>metadata</th>
 <th>rate</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>image</code></td>
-<td><code>pa.array(uint8)</code>, flattened BGR frame</td>
-<td><code>shape</code></td>
-<td>follows <a href="../camera_capture/">camera_capture</a></td>
+<td><code>pa.array(uint8)</code>, flattened BGR frame (<code>480*640*3</code>)</td>
+<td><code>shape: (480, 640, 3)</code>, <code>time: float</code> (<code>time.time()</code> at capture)</td>
+<td>camera-limited (typically 30 fps). TODO: measure on the Jetson</td>
 </tr>
 </tbody>
 </table>
-<h2 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">&para;</a></h2>
-<p>None.</p>
+<p>Camera index is hard-coded (<code>cv2.VideoCapture(0)</code>, usually the built-in webcam); change it if you get
+<code>error: camera didn't open</code>.</p>
 
 
 

@@ -630,10 +630,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -686,14 +682,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../dora/nodes/camera_capture/" class="md-nav__link">
+      <a href="../dora/nodes/camera_pub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    camera_capture
+    camera_pub
   
 
     
@@ -714,70 +710,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../dora/nodes/second_frame_displayer/" class="md-nav__link">
+      <a href="../dora/nodes/camera_sub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    second_frame_displayer
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../dora/nodes/rerun_image_test/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    rerun_image_test
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../dora/nodes/rerun_test/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    rerun_test
+    camera_sub
   
 
     
@@ -882,10 +822,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -938,14 +874,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/python/camera_capture/" class="md-nav__link">
+      <a href="../api/python/camera_pub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    camera_capture
+    camera_pub
   
 
     
@@ -966,70 +902,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/python/rerun_image_test/" class="md-nav__link">
+      <a href="../api/python/camera_sub/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    rerun_image_test
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../api/python/rerun_test/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    rerun_test
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../api/python/second_frame_displayer/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    second_frame_displayer
+    camera_sub
   
 
     
@@ -1169,6 +1049,25 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#pixi-in-one-minute" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pixi in one minute
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1188,20 +1087,47 @@
 
 
 <h1 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h1>
-<p>One <a href="https://pixi.sh">pixi</a> manifest covers the whole environment — Python and non-Python alike — for
-every platform, with a single <code>pixi.lock</code> solved for all of them at once.</p>
+<p>The whole environment — Python, OpenCV, ROS 2 Jazzy, dora, rerun — comes from one
+<a href="https://pixi.sh">pixi</a> manifest, <code>pixi.toml</code>.</p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://pixi.sh/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>sh<span class="w">     </span><span class="c1"># once</span>
 pixi<span class="w"> </span>install<span class="w">                                   </span><span class="c1"># from the repo root</span>
 pixi<span class="w"> </span>run<span class="w"> </span>install-rerun<span class="w">                         </span><span class="c1"># Jetson only — rerun lives outside the lock there</span>
 </code></pre></div>
-<p>Then <code>pixi run &lt;task&gt;</code> / <code>pixi run &lt;cmd&gt;</code>, or <code>pixi shell</code>. <code>pixi task list</code> shows the tasks.</p>
+<h2 id="pixi-in-one-minute">pixi in one minute<a class="headerlink" href="#pixi-in-one-minute" title="Permanent link">&para;</a></h2>
+<p>pixi is a package manager that installs everything (conda-forge packages <em>and</em> PyPI packages) into
+a project-local environment under <code>.pixi/</code>. Nothing goes on your system. What you need to know:</p>
 <ul>
-<li>Adding a dependency: <code>pixi add &lt;pkg&gt;</code> (<code>pixi add --pypi &lt;pkg&gt;</code> for PyPI). It either resolves for every
-  platform or fails right there, before anyone installs anything.</li>
-<li>Jetson-only dependencies go under <code>[target.jetson.*]</code>, laptop substitutes under <code>[target.osx-arm64.*]</code>
-  — see <a href="platforms/">Platforms</a> for the reasoning and the JetPack-native OpenCV / TensorRT wiring.</li>
-<li>Setting up another laptop OS? <a href="adding-a-platform/">Adding a platform</a>.</li>
-<li>The docs toolchain is a separate pixi environment (<code>docs</code>); see <a href="../contributing-docs/">Updating the docs</a>.</li>
+<li><strong><code>pixi.toml</code></strong> lists the dependencies; <strong><code>pixi.lock</code></strong> records the exact versions that were solved
+  and is checked in, so everyone gets the same environment. <code>pixi install</code> reads the lock.
+  (<a href="https://pixi.sh/latest/reference/pixi_manifest/">manifest</a> ·
+  <a href="https://pixi.sh/latest/workspace/lockfile/">lock file</a>)</li>
+<li>
+<p><strong>Running things.</strong> The environment isn't on your <code>PATH</code> by default. Either enter it with
+  <a href="https://pixi.sh/latest/reference/cli/pixi/shell/"><code>pixi shell</code></a> and work normally (<code>exit</code> to leave),
+  or prefix a single command with <a href="https://pixi.sh/latest/reference/cli/pixi/run/"><code>pixi run</code></a>:</p>
+<p><div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>shell
+dora<span class="w"> </span>run<span class="w"> </span>goose-eyes/dataflows/dataflow.yml
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>run<span class="w"> </span>dora<span class="w"> </span>run<span class="w"> </span>goose-eyes/dataflows/dataflow.yml
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Tasks</strong> are named shortcuts defined in <code>pixi.toml</code> (<code>pixi task list</code>). This repo keeps them for
+  tooling only — <code>install-rerun</code>, the <code>docs*</code> tasks — not for running dataflows.
+  (<a href="https://pixi.sh/latest/workspace/advanced_tasks/">tasks</a>)</p>
+</li>
+<li><strong>Adding a dependency:</strong> <a href="https://pixi.sh/latest/reference/cli/pixi/add/"><code>pixi add &lt;pkg&gt;</code></a>
+  (<code>pixi add --pypi &lt;pkg&gt;</code> for PyPI). It re-solves the lock for every platform and fails right there if
+  the package doesn't exist for one of them.</li>
+<li><strong>Platforms and targets.</strong> The manifest is solved for the Jetson and for macOS laptops at once;
+  platform-specific dependencies live in <code>[target.&lt;platform&gt;.*]</code> tables. See
+  <a href="platforms/">Platforms</a> and <a href="adding-a-platform/">Adding a platform</a>.</li>
+<li><strong>ROS 2 Jazzy</strong> comes from the <a href="https://robostack.github.io">RoboStack</a> conda channel as ordinary
+  dependencies — no <code>source /opt/ros/...</code>, it's just there inside the environment. Nothing in
+  <code>goose-eyes/</code> uses it yet.</li>
+<li>The docs toolchain is a separate pixi <em>environment</em> (<code>docs</code>) so the runtime env stays small; the
+  <code>pixi run docs*</code> tasks pick it automatically. (<a href="https://pixi.sh/latest/workspace/multi_environment/">environments</a>,
+  <a href="../contributing-docs/">Updating the docs</a>)</li>
 </ul>
 
 
