@@ -55,6 +55,3 @@ on the Jetson should come from NVIDIA's JetPack wheels.
 - On the Jetson, `pixi run` / `pixi shell` put conda's `lib/` first on `LD_LIBRARY_PATH`, so system
   tools run from inside the env (`nvcc`, `tegrastats`, …) see conda's libraries too. Harmless so far; run
   a system tool outside pixi if it misbehaves.
-- To install on an aarch64 machine that isn't JetPack 7 (e.g. a container):
-  `CONDA_OVERRIDE_GLIBC=2.39 pixi install`. `import cv2` then falls back to conda's build since the
-  JetPack paths don't exist.

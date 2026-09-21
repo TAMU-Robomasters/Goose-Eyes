@@ -1,7 +1,7 @@
 # Goose-Eyes
 
 Autonomy code base for the 26-27 season. The runtime is a [dora-rs](https://dora-rs.ai) dataflow: each
-node is its own process (Python today; Rust and C/C++ later), wired together by a YAML graph. The main
+node is its own process (Supports Python,C,C++,Rust), wired together by a YAML graph. The main
 platform is the Jetson Orin; see [Setup](setup/index.md) for getting an environment on either it or a laptop.
 
 This site is the hub: it documents how the system is structured and what each component's contract is
