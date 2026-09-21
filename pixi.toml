@@ -2,7 +2,7 @@
 authors = ["kahzmic <159095560+kahzmic@users.noreply.github.com>"]
 channels = ["robostack-jazzy", "conda-forge"]
 name = "Goose-Eyes"
-platforms = ["osx-arm64"]
+platforms = ["osx-arm64", "linux-aarch64"]
 version = "0.1.0"
 
 [activation.env]
@@ -21,6 +21,22 @@ nav2-headless = "ros2 launch nav2_bringup tb3_simulation_launch.py headless:=Tru
 # SLAM variant: build the map live instead of loading tb3_sandbox.yaml.
 nav2-slam = "ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False slam:=True"
 
+# dora's published ROS 2 bridge is Humble-only (dora-rs/dora#3554) and the pip wheel doesn't
+# ship the bridge binary anyway, so build a Jazzy one from source into the env's bin/.
+# The script is a no-op once the binary is installed (`--force` to rebuild), so any task that
+# uses a `ros2:` node can cheaply `depends-on` it.
+build-dora-ros2-bridge = "bash scripts/build_dora_ros2_bridge.sh"
+# Rerun demo: webcam + the Nav2 stack (/scan, /tf, plans, costmaps) bridged into dora; see rerun-ros-dora.yml.
+rerun-ros = { cmd = "dora run rerun-ros-dora.yml", depends-on = ["build-dora-ros2-bridge"] }
+
+# Plain ROS 2 image pub/sub (ros2_pubsub/): webcam -> sensor_msgs/Image -> OpenCV window on each side.
+# A 640x480 bgr8 frame is ~921 KB. Fast DDS's shared-memory transport doesn't work in this macOS env,
+# so it falls back to UDP loopback, which drops most frames that big (~0.5 Hz). LARGE_DATA moves user
+# data onto TCP with big enough buffers (full rate). Set per-task, not in [activation.env]: the
+# dora ros2 bridge (RustDDS) is UDP-only and wouldn't see TCP traffic. Both nodes need it.
+ros-image-pub = { cmd = "python ros2_pubsub/image_publisher.py", env = { FASTDDS_BUILTIN_TRANSPORTS = "LARGE_DATA?max_msg_size=4MB&sockets_size=4MB" } }
+ros-image-sub = { cmd = "python ros2_pubsub/image_subscriber.py", env = { FASTDDS_BUILTIN_TRANSPORTS = "LARGE_DATA?max_msg_size=4MB&sockets_size=4MB" } }
+
 [dependencies]
 python = "3.12.*"
 ros-jazzy-navigation2 = ">=1.3.12,<2"
@@ -31,9 +47,13 @@ ros-jazzy-rviz2 = ">=14.1.23,<15"
 ros-jazzy-ros-base = ">=0.11.0,<0.12"
 coreutils = ">=9.11,<10"
 opencv = ">=4.13.0,<5"
+# rust + git: build the Jazzy dora-ros2-bridge-node (scripts/build_dora_ros2_bridge.sh) and,
+# on the Jetson, the iceoryx2 sdist below.
+rust = ">=1.85"
+git = "*"
 
 [pypi-dependencies]
-dora-rs-cli = "==1"
+dora-rs-cli = "==1.0.1"
 dora-rs = ">=1.0.1, <2"
 rerun-sdk = ">=0.38.1, <0.39"
 

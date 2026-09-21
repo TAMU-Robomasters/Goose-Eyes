@@ -1,0 +1,89 @@
+nodes:
+  - id: camera
+    path: camera_capture.py
+    outputs:
+      - image
+
+  - id: displayer
+    path: second_frame_displayer.py
+    inputs:
+      image: camera/image
+
+  # One bridge node subscribes to every Nav2 topic we visualise (dora ROS2 bridge multi-topic
+  # mode). Each `output:` becomes `ros_bridge/<output>` for downstream nodes.
+  #
+  # Topic list follows the Nav2 server outputs (https://docs.nav2.org/configuration/):
+  #   planner_server    -> /plan                     nav_msgs/Path            (global plan, map frame)
+  #   controller_server -> /local_plan               nav_msgs/Path            (DWB local plan, odom frame)
+  #   costmap_2d        -> /global_costmap/costmap   nav_msgs/OccupancyGrid   (map frame,  1 Hz, transient_local)
+  #   costmap_2d        -> /local_costmap/costmap    nav_msgs/OccupancyGrid   (odom frame, 2 Hz, transient_local)
+  #   amcl + odometry   -> /tf                       tf2_msgs/TFMessage       (map->odom, odom->base_*)
+  #   robot_state_pub   -> /tf_static                tf2_msgs/TFMessage       (base_footprint->base_link, lidar mounts…)
+  #
+  # QoS: a per-topic `qos:` REPLACES the node-level one (it isn't merged), so `reliable: true`
+  # is repeated wherever a topic needs its own block. DDS matches a reader that requests
+  # <= what the writer offers, so reliable+volatile readers still match Nav2's
+  # reliable+transient_local costmap writers — but asking for transient_local ourselves
+  # means we get the last latched costmap / static TFs immediately on startup.
+  #
+  # Namespaced topics (`/global_costmap/costmap`) need the `Name::parse` patch applied by
+  # scripts/build_dora_ros2_bridge.sh — the stock v1.0.1 bridge rejects a `/` in the name.
+  - id: ros_bridge
+    ros2:
+      qos:
+        reliable: true
+        durability: volatile
+        liveliness: automatic
+      topics:
+        - topic: /scan
+          message_type: sensor_msgs/LaserScan
+          direction: subscribe
+          output: scan
+        - topic: /tf
+          message_type: tf2_msgs/TFMessage
+          direction: subscribe
+          output: tf
+          qos: { reliable: true, keep_last: 100 }   # tf2 broadcasters burst; depth matches tf2's default
+        - topic: /tf_static
+          message_type: tf2_msgs/TFMessage
+          direction: subscribe
+          output: tf_static
+          qos: { reliable: true, durability: transient_local, keep_last: 100 }
+        - topic: /plan
+          message_type: nav_msgs/Path
+          direction: subscribe
+          output: plan
+        - topic: /local_plan
+          message_type: nav_msgs/Path
+          direction: subscribe
+          output: local_plan
+        - topic: /global_costmap/costmap
+          message_type: nav_msgs/OccupancyGrid
+          direction: subscribe
+          output: global_costmap
+          qos: { reliable: true, durability: transient_local }
+        - topic: /local_costmap/costmap
+          message_type: nav_msgs/OccupancyGrid
+          direction: subscribe
+          output: local_costmap
+          qos: { reliable: true, durability: transient_local }
+    outputs:
+      - scan
+      - tf
+      - tf_static
+      - plan
+      - local_plan
+      - global_costmap
+      - local_costmap
+
+  - id: rerun
+    path: rerun_image_test.py
+    inputs:
+      image: camera/image
+      scan: ros_bridge/scan
+      tf: ros_bridge/tf
+      tf_static: ros_bridge/tf_static
+      plan: ros_bridge/plan
+      local_plan: ros_bridge/local_plan
+      global_costmap: ros_bridge/global_costmap
+      local_costmap: ros_bridge/local_costmap

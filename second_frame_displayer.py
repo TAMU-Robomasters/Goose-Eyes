@@ -1,5 +1,6 @@
-import cv2
 import time
+
+import cv2
 from dora import Node
 
 node = Node()
@@ -8,14 +9,11 @@ for event in node:
         md = event["metadata"]
         shape = md["shape"]
         pub_time = md["time"]
-        print(f"latency: {(time.time() - pub_time) * 1E6}")
         image_raveled = event["value"].to_numpy()
         image = image_raveled.reshape(shape)
         cv2.imshow("second", image)
         cv2.waitKey(1)
-        print("recieved image")
     elif event["type"] == "STOP":
         break
 
 cv2.destroyAllWindows()
-

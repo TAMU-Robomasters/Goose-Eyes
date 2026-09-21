@@ -7,3 +7,6 @@ __pycache__
 
 # for mac
 .DS_Store
+
+# dora source + cargo target dir for scripts/build_dora_ros2_bridge.sh
+.dora-build/
