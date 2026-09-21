@@ -6,7 +6,6 @@ for event in node:
     if event["type"] == "INPUT":
         md = event["metadata"]
         shape = md["shape"]
-        pub_time = md["time"]
         image_raveled = event["value"].to_numpy()
         image = image_raveled.reshape(shape)
         cv2.imshow("second", image)
