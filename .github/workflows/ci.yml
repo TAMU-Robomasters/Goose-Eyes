@@ -23,7 +23,7 @@ jobs:
       - uses: prefix-dev/setup-pixi@v0.10.2
         with:
           environments: lint   # ruff only (no-default-feature) — no ROS / dora solve
-          locked: true         # fail if pixi.lock is out of sync with pixi.toml
+          locked: false        # allow lint env install even when other workspace envs change
           cache: true
 
       - name: ruff check
