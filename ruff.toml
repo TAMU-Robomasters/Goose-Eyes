@@ -1,0 +1,3 @@
+# Ruff settings; the ruff binary itself is pinned in pixi.toml ([feature.lint]).
+# `pixi run lint` / `pixi run fmt` locally, same commands in .github/workflows/ci.yml.
+target-version = "py312"

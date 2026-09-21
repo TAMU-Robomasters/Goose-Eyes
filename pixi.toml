@@ -89,5 +89,17 @@ docs-gen = "bash utils/docs_gen.sh"
 docs = { cmd = "mkdocs build --strict", depends-on = ["docs-gen"] }
 docs-serve = { cmd = "mkdocs serve", depends-on = ["docs-gen"] }
 
+# ---- Lint (ruff) -------------------------------------------------------------------------------
+# Standalone env (`no-default-feature`): just ruff, so CI can lint in seconds without solving the
+# ROS / dora stack. Pinned here so local runs and CI use the same ruff; config lives in ruff.toml.
+[feature.lint.dependencies]
+ruff = ">=0.16.7,<0.17"
+
+[feature.lint.tasks]
+lint = "ruff check"
+fmt = "ruff format --check"
+fmt-fix = "ruff format"
+
 [environments]
 docs = { features = ["docs"], solve-group = "default" }
+lint = { features = ["lint"], no-default-feature = true }
