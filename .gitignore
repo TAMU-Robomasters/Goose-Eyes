@@ -1,17 +1,2 @@
-.venv/# pixi environments
-.pixi/*
-!.pixi/config.toml
-out/
-
-__pycache__
-
-# for mac
-.DS_Store
-
-
-# agent stuff
-.claude/
-CLAUDE.md
-
-# mkdocs build output
-site/
+.venv/
+__pycache__/
