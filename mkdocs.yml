@@ -1,0 +1,93 @@
+site_name: Goose-Eyes
+site_description: Autonomy code base for the 26-27 season
+repo_url: https://github.com/TAMU-Robomasters/Goose-Eyes
+repo_name: TAMU-Robomasters/Goose-Eyes
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+nav:
+  - Overview: index.md
+  - Setup:
+      - setup/index.md
+      - Platforms: setup/platforms.md
+      - Adding a platform: setup/adding-a-platform.md
+  - dora:
+      - dora/index.md
+      - Architecture: dora/architecture.md
+      - Nodes:
+          - camera_pub: dora/nodes/camera_pub.md
+          - camera_sub: dora/nodes/camera_sub.md
+  - API Reference:
+      - api/index.md
+      - Python: api/python/
+  - Contributing:
+      - Updating the docs: contributing-docs.md
+
+plugins:
+  - search
+  - gen-files:
+      scripts:
+        - utils/gen_api_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [goose-eyes/nodes]
+          options:
+            docstring_style: google
+            show_source: true
+            show_signature_annotations: true
+            separate_signature: true
+            show_root_heading: false
+            show_root_toc_entry: false
+            members_order: source
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.snippets:
+      # Paths in `--8<--` are relative to the repo root, so config files embed straight from source.
+      base_path: ["."]
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+# Anything not in nav (e.g. generated/*.mmd, which are only ever snippet-included) is fine.
+validation:
+  nav:
+    omitted_files: info
+  links:
+    absolute_links: warn
+    unrecognized_links: warn

@@ -1,0 +1,11 @@
+nodes:
+  - id: camera
+    path: ../nodes/camera_pub.py
+    outputs:
+      - image
+
+  - id: displayer 
+    path: ../nodes/camera_sub.py
+    inputs:
+      image: camera/image
+

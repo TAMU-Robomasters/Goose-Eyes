@@ -1,0 +1,93 @@
+[workspace]
+authors = ["kahzmic <159095560+kahzmic@users.noreply.github.com>"]
+channels = ["robostack-jazzy", "conda-forge"]
+name = "Goose-Eyes"
+platforms = [
+  # Main platform: Jetson AGX Orin / Orin NX on JetPack 7 (L4T R39.2.x) = Ubuntu 24.04, glibc 2.39,
+  # CUDA 13.2, TensorRT 10.16. A named pixi platform: it solves for the linux-aarch64 subdir, but the
+  # solver may assume the declared virtual packages, and `pixi install` refuses a machine that doesn't
+  # provide them (e.g. a JetPack 6 / Ubuntu 22.04 board). Jetson-only bits live under [target.jetson.*].
+  # CUDA is deliberately *not* declared (`cuda = "13.2"`): that makes conda-forge prefer its CUDA builds,
+  # which ship conda's own CUDA runtime rather than JetPack's. GPU Python packages on the Jetson should
+  # come from NVIDIA's JetPack wheels instead; add `cuda = "13.2"` here only if a conda package needs `__cuda`.
+  { name = "jetson", platform = "linux-aarch64", glibc = "2.39" },
+  # Dev laptops: partial support. Same ROS 2 / dora stack, conda-forge OpenCV instead of JetPack's,
+  # no CUDA / TensorRT. Substitutes live under [target.osx-arm64.*].
+  "osx-arm64",
+]
+version = "0.1.0"
+
+# dora dataflows live in goose-eyes/dataflows/ (node scripts in goose-eyes/nodes/) and are run directly:
+# `pixi run dora run goose-eyes/dataflows/dataflow.yml` (or `dora run …` inside `pixi shell`); see docs/dora/index.md.
+
+# Shared by every platform. ROS 2 Jazzy comes from RoboStack everywhere — JetPack 7 doesn't ship
+# ROS, so there is no native one to prefer on the Jetson. Nothing in goose-eyes/ uses ROS 2 yet.
+[dependencies]
+python = "3.12.*"
+coreutils = ">=9.11,<10"
+ros-jazzy-ros-base = ">=0.11.0,<0.12"
+ros-jazzy-navigation2 = ">=1.3.12,<2"
+ros-jazzy-nav2-bringup = ">=1.3.12,<2"
+ros-jazzy-nav2-minimal-tb3-sim = ">=1.0.1,<2"
+ros-jazzy-nav2-minimal-tb4-sim = ">=1.0.1,<2"
+ros-jazzy-rviz2 = ">=14.1.23,<15"
+
+[pypi-dependencies]
+dora-rs-cli = "==1.0.1"
+dora-rs = ">=1.0.1, <2"
+
+# ---- Jetson (main platform) -------------------------------------------------------------------
+# No conda OpenCV here: `import cv2` resolves to JetPack's OpenCV 4.8 build (GStreamer 1.24 with the
+# NVIDIA plugins) and `import tensorrt` to JetPack's TensorRT, wired in by utils/jetson_activate.sh.
+[target.jetson.dependencies]
+# JetPack's cv2 is compiled against apt numpy 1.26 and refuses to import under NumPy 2.
+numpy = "<2"
+# rerun-sdk's runtime deps. rerun itself can't be in this solve (every release since 0.24 declares
+# `numpy>=2`, see utils/install_jetson_rerun.sh), so `pixi run install-rerun` adds the wheel --no-deps.
+attrs = ">=23.1.0"
+pillow = ">=8.0.0"
+psutil = ">=7.0"
+typing_extensions = ">=4.5"
+
+[target.jetson.activation]
+scripts = ["utils/jetson_activate.sh"]
+
+[target.jetson.tasks]
+# rerun-sdk lives outside pixi.lock on the Jetson; the script header explains why. Idempotent (~1 s once
+# it's there), so a future dataflow that logs to rerun can `depends-on = ["install-rerun"]`.
+install-rerun = "bash utils/install_jetson_rerun.sh"
+
+# ---- Dev laptops (partial support) -------------------------------------------------------------
+[target.osx-arm64.dependencies]
+opencv = ">=4.13.0,<5"
+
+[target.osx-arm64.pypi-dependencies]
+rerun-sdk = ">=0.38.1, <0.39"
+
+# ---- Docs (MkDocs) -----------------------------------------------------------------------------
+# Separate feature so the runtime env doesn't carry the docs toolchain; `pixi run docs*` picks the
+# `docs` environment automatically because the tasks are only defined there. Same solve-group as the
+# default env, so the shared packages (python, dora, …) are identical versions in both.
+[feature.docs.dependencies]
+mkdocs-material = "==9.7.7"
+mkdocstrings-python = "==2.0.8"
+mkdocs-gen-files = "==0.6.1"
+mkdocs-literate-nav = "==0.6.3"
+mkdocs-section-index = "==0.3.12"
+
+[feature.docs.activation.env]
+# One of the mkdocs plugins prints a multi-paragraph "switch to ProperDocs" ad on every build; mute it.
+DISABLE_MKDOCS_2_WARNING = "true"
+
+[feature.docs.tasks]
+# Regenerates  (dora graph Mermaid → docs/generated/).
+docs-gen = "bash utils/docs_gen.sh"
+# Full build; --strict turns broken links / nav mistakes into errors so CI can run it later.
+# Placeholder for the compiled-language API docs, once there are Rust / C++ nodes:
+#   cargo doc --no-deps && cp -r target/doc site/api/rust/
+#   doxygen Doxyfile     && cp -r doxygen/html site/api/cpp/
+docs = { cmd = "mkdocs build --strict", depends-on = ["docs-gen"] }
+docs-serve = { cmd = "mkdocs serve", depends-on = ["docs-gen"] }
+
+[environments]
+docs = { features = ["docs"], solve-group = "default" }
