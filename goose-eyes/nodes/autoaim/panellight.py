@@ -39,7 +39,7 @@ def main():
             cv.imshow("panellight", frame)
 
             overlay = frame.copy()
-            cv.drawContours(overlay, contours, -1, (0, 255, 0), 2)
+            cv.drawContours(overlay, contours, -1, (0, 0, 255), 2)
             cv.imshow("contours", overlay)
 
             if cv.waitKey(1) & 0xFF == ord("q"):
