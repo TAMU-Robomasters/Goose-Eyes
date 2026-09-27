@@ -37,7 +37,10 @@ def main():
                 break
             contours = frame_process(frame)
             cv.imshow("panellight", frame)
-            cv.imshow("contours", contours)
+
+            overlay = frame.copy()
+            cv.drawContours(overlay, contours, -1, (0, 255, 0), 2)
+            cv.imshow("contours", overlay)
 
             if cv.waitKey(1) & 0xFF == ord("q"):
                 break
