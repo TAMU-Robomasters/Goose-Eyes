@@ -4,12 +4,19 @@ nodes:
     env:
       REF_PORT: /dev/ttyTHS1
       REF_BAUD: "115200" # 921600 for the VTM link
-      REF_ONLY: "0x0201" # comma/space separated cmd_ids to publish; empty = all
+      # REF_ONLY: "0x0201" # comma/space separated cmd_ids to publish; empty = all
       # REF_SKIP: "0x0202" # cmd_ids to drop
     outputs:
       - referee
 
   - id: referee_printer
     path: ref_sub.py
+    inputs:
+      referee: referee/referee
+
+  - id: referee_logger
+    path: ref_log.py
+    env:
+      REF_LOG: referee_log.jsonl # relative to where you run `dora start`
     inputs:
       referee: referee/referee

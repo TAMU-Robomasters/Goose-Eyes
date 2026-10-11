@@ -13,7 +13,9 @@ Requires: pyserial
 """
 
 import argparse
+import json
 import sys
+import time
 from collections.abc import Iterator
 
 import serial
@@ -45,14 +47,20 @@ def main() -> int:
     ap.add_argument("-b", "--baud", type=int, default=115200, help="921600 for the VTM link")
     ap.add_argument("--only", nargs="+", type=cmd_id_arg, metavar="CMD", help="only print these cmd_ids, e.g. 0x0202")
     ap.add_argument("--skip", nargs="+", type=cmd_id_arg, metavar="CMD", help="don't print these cmd_ids")
+    ap.add_argument("-o", "--out", metavar="FILE", help="append every printed message to FILE as JSON lines")
     args = ap.parse_args()
     only, skip = set(args.only or ()), set(args.skip or ())
 
     parser = RefereeParser()
+    out = open(args.out, "a") if args.out else None  # noqa: SIM115 (closed in finally)
     try:
         for msg in read_messages(args.port, args.baud, parser):
             if (only and msg.cmd_id not in only) or msg.cmd_id in skip:
                 continue
+            if out:
+                row = {"t": time.time(), "cmd_id": msg.cmd_id, "name": msg.name, "length_ok": msg.length_ok, "values": msg.values}
+                out.write(json.dumps(row, default=str) + "\n")
+                out.flush()
             warn = "" if msg.length_ok else " !len"
             print(f"0x{msg.cmd_id:04X} {msg.name}{warn} {msg.values}", flush=True)
     except KeyboardInterrupt:
@@ -61,6 +69,8 @@ def main() -> int:
         print(e, file=sys.stderr)
         return 1
     finally:
+        if out:
+            out.close()
         print(f"stats: {parser.stats}", file=sys.stderr)
     return 0
 
