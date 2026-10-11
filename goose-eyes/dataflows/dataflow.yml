@@ -4,8 +4,16 @@ nodes:
     outputs:
       - image
 
+  - id: lightDetector
+    path: ../nodes/autoaim/lightDetector.py
+    inputs:
+      image: camera/image
+    outputs:
+      - points
+
   - id: displayer 
     path: ../nodes/camera_sub.py
     inputs:
       image: camera/image
+      points: lightDetector/points
 
