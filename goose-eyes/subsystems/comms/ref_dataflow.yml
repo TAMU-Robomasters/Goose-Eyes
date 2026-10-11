@@ -2,8 +2,10 @@ nodes:
   - id: referee
     path: ref_pub.py
     env:
-      REF_PORT: /dev/ttyUSB0
+      REF_PORT: /dev/ttyTHS1
       REF_BAUD: "115200" # 921600 for the VTM link
+      REF_ONLY: "0x0201" # comma/space separated cmd_ids to publish; empty = all
+      # REF_SKIP: "0x0202" # cmd_ids to drop
     outputs:
       - referee
 
