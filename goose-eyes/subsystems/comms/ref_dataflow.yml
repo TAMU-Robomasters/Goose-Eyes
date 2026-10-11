@@ -1,0 +1,13 @@
+nodes:
+  - id: referee
+    path: ref_pub.py
+    env:
+      REF_PORT: /dev/ttyUSB0
+      REF_BAUD: "115200" # 921600 for the VTM link
+    outputs:
+      - referee
+
+  - id: referee_printer
+    path: ref_sub.py
+    inputs:
+      referee: referee/referee

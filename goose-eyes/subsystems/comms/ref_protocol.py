@@ -7,7 +7,7 @@ Decodes each command into a flat dict of named values: 0x0001-0x020E, 0x0301 (+ 
 
 import struct
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 type Value = int | float | str
 type Bits = Sequence[tuple[str, int, int]]
@@ -30,9 +30,6 @@ class Field:
     fmt: str
     bits: Bits = ()
     keep: bool = True
-
-    def columns(self) -> list[str]:
-        return ([self.name] if self.keep else []) + [b[0] for b in self.bits]
 
     def size(self, remaining: int) -> int:
         kind = self.fmt[0]
@@ -62,10 +59,6 @@ class Field:
 def flags(names: Sequence[str], start: int = 0) -> Bits:
     """Single-bit flags starting at bit `start`."""
     return tuple((n, start + i, 1) for i, n in enumerate(names))
-
-
-def columns_of(fields: Layout) -> list[str]:
-    return [c for f in fields for c in f.columns()]
 
 
 def decode_fields(data: bytes, fields: Layout) -> tuple[dict[str, Value], int, bool]:
@@ -685,14 +678,12 @@ class Message:
     values: field name -> value, in layout order.
     length_ok: False if the payload was shorter or longer than its layout. Missing trailing
         fields are left out of `values`; extra bytes are ignored.
-    fields: the layout that was applied, for formatting.
     """
 
     cmd_id: int
     name: str
     values: dict[str, Value]
     length_ok: bool
-    fields: tuple[Field, ...] = field(repr=False)
 
 
 def decode(cmd_id: int, data: bytes) -> Message:
@@ -703,7 +694,6 @@ def decode(cmd_id: int, data: bytes) -> Message:
         sub_name, sub_fields = lookup_sub(values["sub_id"])
         sub_values, sub_used, complete = decode_fields(data[used:], sub_fields)
         name = f"{name}/{sub_name}"
-        fields = (*fields, *sub_fields)
         values |= sub_values
         used += sub_used
-    return Message(cmd_id, name, values, complete and used == len(data), tuple(fields))
+    return Message(cmd_id, name, values, complete and used == len(data))

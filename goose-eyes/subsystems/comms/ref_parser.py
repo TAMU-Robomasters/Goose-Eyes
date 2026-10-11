@@ -64,7 +64,6 @@ class Frame:
     seq: int
     cmd_id: int
     data: bytes  # data segment only
-    raw: bytes  # whole frame, header through CRC16
 
     def decode(self) -> Message:
         return decode(self.cmd_id, self.data)
@@ -101,10 +100,6 @@ class RefereeParser:
     def _frames(self) -> Iterator[Frame]:
         while (frame := self._next_frame()) is not None:
             yield frame
-
-    def feed_all(self, chunk: bytes) -> list[Frame]:
-        """Helper for batched frames (Used in tester)."""
-        return list(self.feed(chunk))
 
     def _next_frame(self) -> Frame | None:
         while True:
@@ -150,5 +145,4 @@ class RefereeParser:
                 seq=seq,
                 cmd_id=int.from_bytes(raw[HEADER_LEN:data_start], "little"),
                 data=raw[data_start:-CRC16_LEN],
-                raw=raw,
             )
