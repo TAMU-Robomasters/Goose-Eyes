@@ -10,20 +10,28 @@ import random
 import time
 import sys
 
-#NOTES
-#this is the version of the simulation that just uses your laptop's video and 
-#does not include the part that can read from .rrd files or includes the new
-#fix for getting the reff system data, that part is not done yet but once it 
-#is I will replace this file with that
+'''
+CURRENT PROGRESS:
+- can log video from .rrd file or from laptop video camera
+- can log panels from .rrd file
+
+MISSING:
+- need to put in dora form and get ref data logged
+- make the switch between the laptop video to .rrd file nicer and not involve uncommenting things
+- scale the field and robots correctly
+- label the panels and show their actual shape not just center position
+'''
+
 
 class Simulation:
-    def __init__(self, panel, frame) -> None:
+    def __init__(self, panel, frame, times) -> None:
         #show rerun simulation on your local device instead of a different one mode
         localMode = False
 
         #Init everything for the rerun simulation
         self.panel = panel
         self.frame = frame
+        self.times = times
         rr.init("rerun_fake_data_test", spawn=False, recording_id="pleaseeework")
         rr.set_time("stable_time", duration=0)
 
@@ -34,17 +42,24 @@ class Simulation:
             localIp = self.getIP()
             rr.connect_grpc(f"rerun+http://{localIp}:9876/proxy")
             rr.log("logs", rr.TextLog(f"All of this data is fake and the footage is from /dev/video0"))
-            print("simulation is going to show up on this device locally because localMode is on")
-        elif(panel==None or frame==None):
-            panel = self.fakePanels()
+            print("1simulation is going to show up on this device locally because localMode is on")
+        #elif(panel is None or frame is None or len(panel) == 0 or len(frame)):
+            #panel = self.fakePanels()
+            #self.localVideoStreamInit()
+            #rr.serve_grpc()
+            #rr.log("logs", rr.TextLog(f"All of this data is fake and the footage is from /dev/video0"))
+            #print("2connect to see the simulation by running: python -m rerun --connect rerun+http://ipofdeviceAfromtailscale:9876/proxy")
+        else:
+            #rr.log("logs", rr.TextLog(f"This should be the real data and footage... "))
+            #print("connect to see the simulation by running: python -m rerun --connect rerun+http://ipofdeviceAfromtailscale:9876/proxy")
+            #rr.serve_grpc()
+
+            #panel = self.fakePanels()
             self.localVideoStreamInit()
             rr.serve_grpc()
             rr.log("logs", rr.TextLog(f"All of this data is fake and the footage is from /dev/video0"))
-            print("connect to see the simulation by running: python -m rerun --connect rerun+http://ipofdeviceAfromtailscale:9876/proxy")
-        else:
-            rr.log("logs", rr.TextLog(f"This should be the real data and footage... "))
-            print("connect to see the simulation by running: python -m rerun --connect rerun+http://ipofdeviceAfromtailscale:9876/proxy")
-            rr.serve_grpc()
+            print("3connect to see the simulation by running: python -m rerun --connect rerun+http://ipofdeviceAfromtailscale:9876/proxy")
+        
 
         #Everything camera related
         #self.cameraFrameInit()
@@ -52,7 +67,7 @@ class Simulation:
         self.logCameras()
 
         #Main loop/updates
-        self.simulate(panel)
+        self.simulate(panel, frame, times)
         time.sleep(100)
 
         #Exit/end of program
@@ -60,33 +75,47 @@ class Simulation:
         rr.disconnect()
 
     #MAIN LOOP / UPDATES
-    def simulate(self, panel):
+    def simulate(self, panel, frame, times):
         #update everything else
         self.logThisRobot()
         self.logOtherRobots()
-        self.logEverythingElse(panel)
+        self.logEverythingElse()
 
-        #update camera
-        for f in self.input_container.decode(video=0):
-            f.pict_type = av.video.frame.PictureType.NONE
-            for packet in self.stream.encode(f):
-                if packet.pts is None:
-                    continue
-                rr.set_time("stable_time", duration=float(packet.pts * packet.time_base))
-                for c in range(4):
-                    rr.log(f"bot/cam{c+1}", rr.VideoStream.from_fields(sample=bytes(packet)))
-            self.logEverythingElse(panel)
+        start = times[0]
 
-        #waste some time not updating the camera and everything else
-        for i in range(400):
-            time = i * 0.01
-            rr.set_time("stable_time", duration=time)
+        #put live things on screen
+        for p, f, t in zip(panel, frame, times):
+            time.sleep(0.01)
+            print("t:", t, type(t), getattr(t, "shape", None))
+            print("start:", start, type(start), getattr(start, "shape", None))
+            rr.set_time(
+                "stable_time",
+                duration=float(t-start)/1e9
+            )
 
-    #INIT FOR YOUR DEVICE'S CAMERA
-    def cameraFrameInit(self, frame):
-        pass    
+            #panels
+            print(f"time is {t} position is {p[0]} {p[1]} {p[2]}")
+            rr.log(f"markers", rr.Points3D([p]))
 
-    #INIT FOR GENERAL CAMERA PIPELINE
+            #frame for camera 1 update
+            rr.log("bot/cam1", rr.Image(f[0].reshape(720, 1280, 3)))
+
+        #update camera for laptop camera not file camera
+        # for f in self.input_container.decode(video=0):
+        #     f.pict_type = av.video.frame.PictureType.NONE
+        #     for packet in self.stream.encode(f):
+        #         if packet.pts is None:
+        #             continue
+        #         rr.set_time("stable_time", duration=float(packet.pts * packet.time_base))
+        #         for c in range(4):
+        #             rr.log(f"bot/cam{c+1}", rr.VideoStream.from_fields(sample=bytes(packet)))
+
+        # #waste some time not updating the camera and everything else
+        # for i in range(400):
+        #     time = i * 0.01
+        #     rr.set_time("stable_time", duration=time)  
+
+    #INIT FOR LAPTOP CAMERA PIPELINE
     def pipelineInit(self):
         av.logging.set_level(av.logging.VERBOSE)
         container = av.open("/dev/null", "w", format=self.formats[self.codec])
@@ -137,9 +166,7 @@ class Simulation:
         pass
         
     #LOG EVERYTHING THAT ISNT A CAMERA
-    def logEverythingElse(self, panel):
-        rr.log(f"markers", rr.Points3D(panel))
-
+    def logEverythingElse(self):
         #DECORATIONS
         rr.log(
             "world/field", 
@@ -243,5 +270,27 @@ class Simulation:
             index= types.index("wlp0s20f3")
             return addresses[index]
 
+def readDat():
+    panels = []
+    frame = []
+
+    with rr.server.Server(datasets={"recording": ["fakeArmourPanel.rrd"]}) as server:
+        client = server.client()
+        dat = client.get_dataset("recording")
+        
+        #get everything we actually need
+        panelDf = dat.filter_contents(["/panels/panel_0/position"]).reader(index="log_time").to_pandas()
+        cameraDf = dat.filter_contents(["/camera/**"]).reader(index="log_time").to_pandas()
+        panelPos = panelDf["/panels/panel_0/position:Points3D:positions"].to_numpy()
+        panels = [p[0].tolist() for p in panelPos]
+        frames = cameraDf["/camera/rgb:Image:buffer"].to_numpy()
+        times = panelDf.index.to_numpy()
+        
+
+    if(server.is_running()):
+        server.shutdown()
+    return (panels, frames, times)
+
 if __name__ == "__main__":
-    Simulation(panel=None, frame=None)
+    panel, frame, times = readDat()
+    Simulation(panel, frame, times)
