@@ -9,22 +9,20 @@ import netifaces
 import random
 import time
 import sys
-import threading
-import dora
 
 '''
-WARNING: This version does not fully work, that is the threading part is incomplete, the previous version or this version with
-the treading part commented and the Simulation(panel, frame, times) uncommented works as is
-
 CURRENT PROGRESS:
 - can log video from .rrd file or from laptop video camera
 - can log panels from .rrd file
 
 MISSING:
-- fix reff logging system
+- need to put in dora form and get ref data logged
 - make the switch between the laptop video to .rrd file nicer and not involve uncommenting things
 - scale the field and robots correctly
 - label the panels and show their actual shape not just center position
+
+DOCUMENTATION:
+https://docs.google.com/document/d/10vgKZcUVGdw1eXas80Qi6ANJZfDAbjvqK_3WlWHjdM4/edit?tab=t.0
 '''
 
 
@@ -296,27 +294,6 @@ def readDat():
         server.shutdown()
     return (panels, frames, times)
 
-def getReffUpdate(self):
-    node = dora.Node()
-
-    for event in node:
-        if event["type"] == "INPUT" and event["id"] == "data":
-            message = event["value"].to_pylist()[0]
-            rr.log("logs", rr.TextLog(message))
-
 if __name__ == "__main__":
     panel, frame, times = readDat()
-    #Simulation(panel, frame, times)
-
-    #REFF SYSTEM STUFF AND THREADS
-    sim = Simulation.__new__(Simulation)
-    threads = []
-    sim = threading.Thread(target=sim.simulate, args=(panel, frame, times))
-    threads.append(sim)
-    reff = threading.Thread(target=sim.getReffUpdate)
-    threads.append(reff)
-
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
+    Simulation(panel, frame, times)
