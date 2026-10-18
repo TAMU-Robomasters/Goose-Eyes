@@ -20,6 +20,9 @@ MISSING:
 - make the switch between the laptop video to .rrd file nicer and not involve uncommenting things
 - scale the field and robots correctly
 - label the panels and show their actual shape not just center position
+
+DOCUMENTATION:
+https://docs.google.com/document/d/10vgKZcUVGdw1eXas80Qi6ANJZfDAbjvqK_3WlWHjdM4/edit?tab=t.0
 '''
 
 
