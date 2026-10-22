@@ -1,18 +1,16 @@
-import sys
 import time
 
+import config
 import cv2 as cv
 import numpy as np
 import pyarrow as pa
 from dora import Node
 
-import config
-
 ENEMY_COLOR = config.ENEMY_COLOR
 
 
 def frame_process(frame: np.ndarray) -> list:
-    '''
+    """
     Process a camera frame to detect lights of the enemy color.
 
     Args:
@@ -20,7 +18,7 @@ def frame_process(frame: np.ndarray) -> list:
 
     Returns:
         list: A list of detected lights, each represented by four corner coordinates.
-    '''
+    """
     if ENEMY_COLOR == "RED":
         difference = cv.subtract(frame[:, :, 2], frame[:, :, 0])
         mask = cv.inRange(
@@ -126,7 +124,7 @@ def main():
                 light_list,
                 type=pa.list_(
                     pa.list_(pa.int32(), 2),  # each corner: [x, y]
-                    4,                         # four corners per light
+                    4,  # four corners per light
                 ),
             )
 

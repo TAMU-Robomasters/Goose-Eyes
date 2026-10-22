@@ -1,4 +1,5 @@
 flowchart TB
-  camera[\"**camera**"/]
+  cameraDetector[\"**cameraDetector**"/]
   displayer[/"**displayer**"\]
-  camera -- image --> displayer
+  cameraDetector -- image --> displayer
+  cameraDetector -- points --> displayer

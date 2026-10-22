@@ -11,7 +11,6 @@ current_boxes = np.empty((0, 4, 2), dtype=np.int32)
 
 for event in node:
     if event["type"] == "INPUT":
-
         if event["id"] == "image":
             shape = event["metadata"]["shape"]
             image_raveled = event["value"].to_numpy()
