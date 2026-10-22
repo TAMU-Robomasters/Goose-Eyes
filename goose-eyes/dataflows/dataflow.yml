@@ -1,11 +1,12 @@
 nodes:
-  - id: camera
-    path: ../nodes/camera_pub.py
+  - id: cameraDetector
+    path: ../nodes/autoaim/lightDetector.py
     outputs:
       - image
+      - points
 
-  - id: displayer 
+  - id: displayer
     path: ../nodes/camera_sub.py
     inputs:
-      image: camera/image
-
+      image: cameraDetector/image
+      points: cameraDetector/points
