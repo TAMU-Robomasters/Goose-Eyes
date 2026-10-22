@@ -5,7 +5,18 @@ import cv2
 import pyarrow as pa
 from dora import Node
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
+
+if not cap.isOpened():
+    raise RuntimeError("Could not open cap")
+
+cap.set(
+    cv2.CAP_PROP_FOURCC,
+    cv2.VideoWriter_fourcc(*"MJPG"),
+)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+cap.set(cv2.CAP_PROP_FPS, 90)
 
 if not cap.isOpened():
     print("error: camera didn't open")
@@ -18,7 +29,6 @@ while True:
     if not ret:
         print("error")
         break
-    frame = cv2.resize(frame, (640, 480))
     image = pa.array(frame.ravel())
     metadata = {"shape": frame.shape, "time": time.time()}
 
