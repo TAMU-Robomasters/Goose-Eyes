@@ -11,9 +11,10 @@ platforms = [
   # which ship conda's own CUDA runtime rather than JetPack's. GPU Python packages on the Jetson should
   # come from NVIDIA's JetPack wheels instead; add `cuda = "13.2"` here only if a conda package needs `__cuda`.
   { name = "jetson", platform = "linux-aarch64", glibc = "2.39" },
-  # Dev laptops: partial support. Same ROS 2 / dora stack, conda-forge OpenCV instead of JetPack's,
-  # no CUDA / TensorRT. Substitutes live under [target.osx-arm64.*].
+  # Dev machines: partial support. Same ROS 2 / dora stack, conda-forge OpenCV instead of JetPack's,
+  # no CUDA / TensorRT. Substitutes live in the `dev` feature/environment (`pixi shell -e dev`).
   "osx-arm64",
+  "linux-64",
 ]
 version = "0.1.0"
 
@@ -34,7 +35,7 @@ ros-jazzy-rviz2 = ">=14.1.23,<15"
 
 [pypi-dependencies]
 dora-rs-cli = "==1.0.1"
-dora-rs = ">=1.0.1, <2"
+dora-rs = "==1.0.1"  # keep in lockstep with dora-rs-cli
 pyusb = ">=1.3.1"
 matplotlib = ">=3.10.9"
 
@@ -59,12 +60,29 @@ scripts = ["utils/jetson_activate.sh"]
 # it's there), so a future dataflow that logs to rerun can `depends-on = ["install-rerun"]`.
 install-rerun = "bash utils/install_jetson_rerun.sh"
 
-# ---- Dev laptops (partial support) -------------------------------------------------------------
-[target.osx-arm64.dependencies]
+# ---- Dev machines (partial support): the `dev` environment ----------------------------------------
+# What the Jetson gets from JetPack (or installs outside the lock), laptops get from conda-forge / PyPI.
+# A feature rather than per-platform target tables so the list lives in one place: pixi has no "every
+# platform except jetson" selector. Use it with `-e dev`: `pixi shell -e dev`, `pixi run -e dev …`.
+# The plain default env still installs on laptops, just without OpenCV / rerun.
+[feature.dev]
+platforms = ["osx-arm64", "linux-64"]
+
+[feature.dev.dependencies]
 opencv = ">=4.13.0,<5"
 
-[target.osx-arm64.pypi-dependencies]
+[feature.dev.pypi-dependencies]
+# Keep equal to RERUN_VERSION in utils/install_jetson_rerun.sh so every platform speaks the same rerun
+# wire format.
 rerun-sdk = ">=0.38.1, <0.39"
+
+[feature.dev.target.linux-64.dependencies]
+# conda-forge libopencv 4.13.0 build _620 links libabseil 2608 without declaring it, while libprotobuf
+# pulls libabseil 2605, so `import cv2` dies on a missing libabsl_*.so.2608. _619 is consistent; drop
+# this cap once a fixed build lands (check: `ldd .pixi/envs/dev/lib/libopencv_dnn.so* | grep "not found"`).
+# ROS (navigation2 → cv_bridge) also pulls py-opencv into the default env; the shared solve-group
+# carries this cap there too.
+libopencv = { version = ">=4.13.0,<5", build-number = "<620" }
 
 # ---- Docs (MkDocs) -----------------------------------------------------------------------------
 # Separate feature so the runtime env doesn't carry the docs toolchain; `pixi run docs*` picks the
@@ -103,5 +121,6 @@ fmt = "ruff format --check"
 fmt-fix = "ruff format"
 
 [environments]
+dev = { features = ["dev"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
 lint = { features = ["lint"], no-default-feature = true }

@@ -1,20 +1,26 @@
 # Platforms
 
-`pixi.toml` declares two [platforms](https://pixi.sh/latest/workspace/multi_platform_configuration/),
-and one `pixi.lock` is solved for both. **`jetson`** is the main target — the robot runs there.
-**`osx-arm64`** (dev laptops) is partial support: same dora / ROS 2 / rerun stack, but conda-forge
-OpenCV instead of JetPack's and no CUDA / TensorRT, so most things can be developed there but not
-everything will run.
+`pixi.toml` declares three [platforms](https://pixi.sh/latest/workspace/multi_platform_configuration/),
+and one `pixi.lock` is solved for all of them. **`jetson`** is the main target — the robot runs there.
+**`osx-arm64`** and **`linux-64`** (dev laptops) are partial support: same dora / ROS 2 / rerun stack,
+but conda-forge OpenCV instead of JetPack's and no CUDA / TensorRT, so most things can be developed
+there but not everything will run.
 
-| | `jetson` (main) | `osx-arm64` (dev, partial) |
+| | `jetson` (main) | `osx-arm64` / `linux-64` (dev, partial) |
 |---|---|---|
-| Hardware / OS | AGX Orin / Orin NX on **JetPack 7**: Ubuntu 24.04, CUDA 13.2 | Apple Silicon Mac |
-| OpenCV | **JetPack's 4.8** (GStreamer with the NVIDIA plugins) | conda-forge 4.13 |
+| Hardware / OS | AGX Orin / Orin NX on **JetPack 7**: Ubuntu 24.04, CUDA 13.2 | Apple Silicon Mac / x86_64 Linux (glibc ≥ 2.28) |
+| Environment | `default` | **`dev`** |
+| OpenCV | **JetPack's 4.8** (GStreamer with the NVIDIA plugins) | conda-forge 4.13 (FFMPEG + V4L, no GStreamer) |
 | TensorRT | JetPack's 10.16 | — |
 | numpy | 1.26 (`<2`, forced by JetPack's cv2) | 2.x |
 | rerun-sdk | `pixi run install-rerun`, outside the lock | in the lock |
 
-The commands are the same on both: `pixi install`, `pixi shell` / `pixi run …`.
+| | Jetson | laptop |
+|---|---|---|
+| install | `pixi install && pixi run install-rerun` | `pixi install -e dev` |
+| use | `pixi shell` / `pixi run …` | `pixi shell -e dev` / `pixi run -e dev …` |
+
+The plain default env also installs on a laptop, just without rerun (and with ROS's cv2 only).
 
 ## How it's wired
 
@@ -22,7 +28,16 @@ The commands are the same on both: `pixi install`, `pixi shell` / `pixi run …`
 (`{ name = "jetson", platform = "linux-aarch64", glibc = "2.39" }`): it solves for `linux-aarch64` but
 pins the glibc a JetPack 7 board has, so `pixi install` on an older JetPack (Ubuntu 22.04) refuses
 instead of producing a half-working env. Jetson-only dependencies and activation live under
-`[target.jetson.*]`, laptop substitutes under `[target.osx-arm64.*]`
+`[target.jetson.*]`.
+
+**The `dev` environment.** Laptop substitutes (conda-forge OpenCV, rerun from PyPI) live in a `dev`
+[feature](https://pixi.sh/latest/workspace/multi_environment/) restricted to
+`platforms = ["osx-arm64", "linux-64"]`, and the `dev` environment is the default feature plus that one.
+It's a feature rather than per-platform target tables so the list lives in one place: pixi has no "every
+platform except jetson" selector, and a feature limited to laptop platforms can't be part of the default
+env without dropping the Jetson from it. That's the reason for `-e dev`: pixi can't pick a default
+environment per machine. `dev` shares the `default` solve-group, so the packages the two envs have in
+common are identical versions
 ([targets](https://pixi.sh/latest/reference/pixi_manifest/#the-target-table),
 [virtual packages](https://pixi.sh/latest/workspace/system_requirements/)).
 
@@ -44,7 +59,7 @@ solve. rerun 0.38.1 actually runs fine on numpy 1.26, so
 [`utils/install_jetson_rerun.sh`](https://github.com/TAMU-Robomasters/Goose-Eyes/blob/main/utils/install_jetson_rerun.sh)
 installs the wheel with `--no-deps` (`pixi run install-rerun`; no-op once installed, `--force` to
 reinstall). Its real runtime deps are in the Jetson solve. Keep the version in that script equal to the
-`rerun-sdk` pin in `pixi.toml` so both platforms speak the same rerun wire format.
+`rerun-sdk` pin in `pixi.toml` (`[feature.dev.pypi-dependencies]`) so all platforms speak the same rerun wire format.
 
 **No CUDA declared.** Adding `cuda = "13.2"` to the `jetson` entry would make conda-forge prefer
 CUDA builds of packages, which drag in conda's own CUDA runtime instead of JetPack's. GPU Python packages

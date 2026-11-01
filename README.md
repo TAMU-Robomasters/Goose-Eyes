@@ -13,19 +13,23 @@ for every platform at once.
 
 ```bash
 curl -fsSL https://pixi.sh/install.sh | sh     # once
-pixi install                                   # from the repo root; on a Jetson also: pixi run install-rerun
+# from the repo root, pick your machine:
+pixi install && pixi run install-rerun         # Jetson
+pixi install -e dev                            # Mac / x86_64 Linux laptop (the `dev` env adds OpenCV + rerun)
 ```
 
 Everything is installed inside the pixi environment, so either enter it with `pixi shell` or prefix commands
-with `pixi run`:
+with `pixi run`. On a laptop add `-e dev` to both:
 
 ```bash
-pixi run dora run goose-eyes/dataflows/dataflow.yml    # the camera pub/sub demo
+pixi run dora run goose-eyes/dataflows/dataflow.yml          # Jetson
+pixi run -e dev dora run goose-eyes/dataflows/dataflow.yml   # laptop
 ```
 
 New here? [docs/setup/](docs/setup/index.md) explains pixi in a minute.
 
-The **Jetson Orin (JetPack 7) is the main platform**; macOS is partially supported for development. What
+The **Jetson Orin (JetPack 7) is the main platform**; macOS and x86_64 Linux are partially supported for
+development through the `dev` environment. What
 differs and why is in [docs/setup/platforms.md](docs/setup/platforms.md).
 
 ## Layout

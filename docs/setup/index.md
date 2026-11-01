@@ -5,9 +5,12 @@ The whole environment — Python, OpenCV, ROS 2 Jazzy, dora, rerun — comes fro
 
 ```bash
 curl -fsSL https://pixi.sh/install.sh | sh     # once
-pixi install                                   # from the repo root
-pixi run install-rerun                         # Jetson only — rerun lives outside the lock there
+# from the repo root, pick your machine:
+pixi install && pixi run install-rerun         # Jetson (rerun lives outside the lock there)
+pixi install -e dev                            # Mac / x86_64 Linux laptop
 ```
+
+On a laptop, add `-e dev` to every `pixi shell` / `pixi run` below; see [Platforms](platforms.md) for why.
 
 ## pixi in one minute
 
@@ -36,12 +39,13 @@ a project-local environment under `.pixi/`. Nothing goes on your system. What yo
 - **Adding a dependency:** [`pixi add <pkg>`](https://pixi.sh/latest/reference/cli/pixi/add/)
   (`pixi add --pypi <pkg>` for PyPI). It re-solves the lock for every platform and fails right there if
   the package doesn't exist for one of them.
-- **Platforms and targets.** The manifest is solved for the Jetson and for macOS laptops at once;
-  platform-specific dependencies live in `[target.<platform>.*]` tables. See
+- **Platforms and targets.** The manifest is solved for the Jetson, macOS and x86_64 Linux at once.
+  Jetson-only dependencies live in `[target.jetson.*]` tables; what laptops need instead lives in the
+  `dev` feature / environment. See
   [Platforms](platforms.md) and [Adding a platform](adding-a-platform.md).
 - **ROS 2 Jazzy** comes from the [RoboStack](https://robostack.github.io) conda channel as ordinary
   dependencies — no `source /opt/ros/...`, it's just there inside the environment. Nothing in
   `goose-eyes/` uses it yet.
-- The docs toolchain is a separate pixi *environment* (`docs`) so the runtime env stays small; the
+- The docs toolchain is a separate pixi *environment* (`docs`), like `dev`, so the runtime env stays small; the
   `pixi run docs*` tasks pick it automatically. ([environments](https://pixi.sh/latest/workspace/multi_environment/),
   [Updating the docs](../contributing-docs.md))

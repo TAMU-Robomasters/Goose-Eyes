@@ -13,7 +13,7 @@
 # Jetson `depends-on` it, so they self-heal if a `pixi install` ever prunes the package.
 set -euo pipefail
 
-# Keep in sync with rerun-sdk in [target.osx-arm64.pypi-dependencies] (pixi.toml) so both platforms
+# Keep in sync with rerun-sdk in [feature.dev.pypi-dependencies] (pixi.toml) so all platforms
 # speak the same rerun wire format.
 RERUN_VERSION="0.38.1"
 
