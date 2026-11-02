@@ -19,6 +19,6 @@ nodes:
 
 
   - id: circlet
-    path: ../nodes/circlet.py
+    path: ../nodes/circlet/circlet.py
     inputs:
-      - circlet_test/auto-aim-locked
+      auto-aim-locked: circlet_test/auto-aim-locked
