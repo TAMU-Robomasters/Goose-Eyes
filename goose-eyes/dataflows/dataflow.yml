@@ -10,3 +10,15 @@ nodes:
     inputs:
       image: cameraDetector/image
       points: cameraDetector/points
+
+
+  - id: circlet_test
+    path: ../nodes/circlet/circlet_test.py
+    outputs:
+      - auto-aim-locked
+
+
+  - id: circlet
+    path: ../nodes/circlet.py
+    inputs:
+      - circlet_test/auto-aim-locked
