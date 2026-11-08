@@ -1,0 +1,17 @@
+nodes:
+  - id: circlet-test
+    path: circlet_test.py
+    outputs:
+      - auto-aim-locked
+
+  - id: circlet
+    path: circlet.py
+    inputs:
+      auto-aim-locked: 
+        source: circlet-test/auto-aim-locked
+        queue_max_size: 1
+        low_latency: true
+      tick: 
+        source: dora/timer/hz/90
+        queue_max_size: 1
+        low_latency: true

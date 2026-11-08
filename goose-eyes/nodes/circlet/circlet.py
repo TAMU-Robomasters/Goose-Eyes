@@ -31,10 +31,16 @@ def getYawValueRight(frame):
     cx_to_fov = lambda cx: (120/1280) * cx
     return cx_to_fov(max_cx) + 120
 
-camera = cv2.VideoCapture(4, cv2.CAP_V4L2)
-camera2 = cv2.VideoCapture(6, cv2.CAP_V4L2)
-if not camera.isOpened() or not camera2.isOpened():
+camera = cv2.VideoCapture(0, cv2.CAP_V4L2)
+camera2 = cv2.VideoCapture(2, cv2.CAP_V4L2)
+#camera = cv2.VideoCapture(4, cv2.CAP_V4L2)
+#camera2 = cv2.VideoCapture(6, cv2.CAP_V4L2)
+if not camera.isOpened() and not camera2.isOpened():
+    raise RuntimeError("Could not open both cameras")
+if not camera.isOpened():
     raise RuntimeError("Could not open camera")
+if not camera2.isOpened():
+    raise RuntimeError("Could not open camera2")
 
 # Request the camera's 1280x720 MJPEG 90 FPS mode.
 camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
@@ -51,23 +57,26 @@ node = Node()
 circlet_active = False
 
 for event in node:
-    if event["type"] == "INPUT" and event["id"] == "auto-aim-locked":
-        circlet_active = bool(event["value"].to_numpy()[0])
-
-    if not circlet_active:
+    if event["type"] != "INPUT":
         continue
 
-    ret, frame = camera.read()
-    ret2, frame2 = camera2.read()
+    if event["id"] == "auto-aim-locked":
+        circlet_active = bool(event["value"].to_pylist()[0])
+        print(f"Circlet active: {circlet_active}")
 
-    try:
-        print(f"left: {getYawValueLeft(frame)}", end=' ')
-    except Exception:
-        print("error", end=' ')
-    try:
-        print(f"right: {getYawValueRight(frame2)}")
-    except Exception:
-        print("error")
+    if event["id"] == "tick" and circlet_active:
+        ret, frame = camera.read()
+        ret2, frame2 = camera2.read()
+
+        try:
+            print(f"left: {getYawValueLeft(frame)}", end=' ')
+        except Exception:
+            print("error", end=' ')
+
+        try:
+            print(f"right: {getYawValueRight(frame2)}")
+        except Exception:
+            print("error")
 
 camera.release()
 camera2.release()
