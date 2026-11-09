@@ -2,17 +2,20 @@
 UART communication to send messages to embedded system and receive transformation matrix data for auto aim.
 """
 
-from ctypes import Structure, c_ubyte, c_uint8, c_float, sizeof, Array
+from ctypes import Structure, c_ubyte, c_uint8, c_float, sizeof, Array, c_bool
 from enum import Enum
 from typing import List
 
 from numpy.testing import print_assert_equal
-from config import SERIAL_PORT, BAUDRATE, DEBUG
 import hteClock
 import serial
 import time
 import numpy as np
 import numpy.typing as npt
+
+SERIAL_PORT: str = "/dev/ttyTHS1"
+BAUDRATE: int = 460800
+DEBUG = True
 
 class CVState(Enum):
     PANEL_NOT_IN_VIEW: int = 0
@@ -47,6 +50,18 @@ class QueryToEmbedded(Structure):
         ("magic", c_uint8),
         ("messageType", c_uint8),
         ("frameDelay_ms", c_uint8),  # frame delay in milliseconds
+    ]
+    magic: int
+    messageType: int
+    frameDelay_ms: int
+
+class QueryToEmbeddedReset(Structure):
+    """Query struct to send to embedded system with magic, messageType, and frame delay"""
+    _pack_ = 1
+    _fields_ = [
+        ("magic", c_uint8),
+        ("messageType", c_uint8),
+        ("some_bs", c_bool),  # frame delay in milliseconds
     ]
     magic: int
     messageType: int
@@ -93,7 +108,7 @@ class EmbeddedCommunicator():
         return None # Something failed
 
     def send_angles_to_embedded(self, pitch: float, yaw: float, timeUntilNextFire: int, \
-                                 cvState: CVState, magic: str = '69', messageType: str = 'd') -> bool:
+                                 cvState: CVState, magic: str = 'a', messageType: str = 'd') -> bool:
         """Send JetsonMessage to embedded system"""
         message = JetsonMessage(
             magic=ord(magic),
@@ -146,7 +161,7 @@ class EmbeddedCommunicator():
             except:
                 raise
 
-    def _send_query_to_embedded(self, frameDelay_ms: int, magic: str = '69', \
+    def _send_query_to_embedded(self, frameDelay_ms: int, magic: str = 'a', \
                                messageType: str = 't') -> bool:
         """Send query to embedded with magic, messageType, and frame delay"""
         query = QueryToEmbedded(
@@ -197,10 +212,10 @@ class EmbeddedCommunicator():
         self.hte.start_time = None
 
         while self.hte.start_pulse is None:
-            reset_message = QueryToEmbedded(
-                magic=ord('69'),
+            reset_message = QueryToEmbeddedReset(
+                magic=ord('a'),
                 messageType=HTE_RESET_MESSAGE_TYPE,
-                frameDelay_ms=0,
+                some_bs=1,
             )
             port.write(bytes(reset_message))
             self.hte.reset_start_pulse()
