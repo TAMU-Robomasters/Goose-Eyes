@@ -1,274 +1,273 @@
-import time
-from typing import Optional
+"""
+UART communication to send messages to embedded system and receive transformation matrix data for auto aim.
+"""
 
-import commStructs
+from ctypes import Structure, c_ubyte, c_uint8, c_float, sizeof, Array
+from enum import Enum
+from typing import List
+
+from numpy.testing import print_assert_equal
+from config import SERIAL_PORT, BAUDRATE, DEBUG
 import hteClock
 import serial
+import time
+import numpy as np
+import numpy.typing as npt
 
-MAGIC = b"\x69\x42"
+class CVState(Enum):
+    PANEL_NOT_IN_VIEW: int = 0
+    PANEL_IN_VIEW: int = 1
+    FIRE: int = 2
 
 
-def checksum8(data: bytes) -> int:
-    return sum(data) & 0xFF
+# Struct definitions matching C++ packed structs
+class JetsonMessage(Structure):
+    """Message struct to send to embedded system (JetsonMessage)"""
+    _pack_ = 1
+    _fields_ = [
+        ("magic", c_uint8),
+        ("messageType", c_uint8),
+        ("pitch", c_float),  # pitch angle in radians
+        ("yaw", c_float),  # yaw angle in radians
+        ("timeUntilNextFire", c_uint8), # in ms. Max value is 255 ms
+        ("cvState", c_uint8),  # CVState (assuming uint8_t) // 1 if a panel is detected
+    ]
+    magic: int
+    messageType: int
+    pitch: float
+    yaw: float
+    timeUntilNextFire: int
+    cvState: CVState
 
 
-class serial_comms:
-    def __init__(
-        self,
-        port,
-        baudrate=115200,
-        packet_size=64,
-        timeout=1000,
-    ):
-        self.packet_size = packet_size
-        self.timeout = timeout
-        self.rx_buffer = b""
+class QueryToEmbedded(Structure):
+    """Query struct to send to embedded system with magic, messageType, and frame delay"""
+    _pack_ = 1
+    _fields_ = [
+        ("magic", c_uint8),
+        ("messageType", c_uint8),
+        ("frameDelay_ms", c_uint8),  # frame delay in milliseconds
+    ]
+    magic: int
+    messageType: int
+    frameDelay_ms: int
 
-        self.dev = serial.Serial(
-            port=port,
-            baudrate=baudrate,
-            timeout=timeout / 1000.0,
-        )
+
+HTE_RESET_MESSAGE_TYPE = 3
+
+
+class EmbeddedTransformationMessage(Structure):
+    """Response struct from embedded system with transformation matrix"""
+    _pack_ = 1
+    _fields_ = [
+        ("magic", c_uint8),
+        ("yaw", c_float),  # yaw angle in radians
+        ("pitch", c_float),  # pitch angle in radians
+        ("matrix", c_float * 16),  # 4x4 transformation matrix (row-major order)
+    ]
+    magic: int
+    yaw: float
+    pitch: float
+    matrix: List[float]
+
+
+class EmbeddedCommunicator():
+    def __init__(self):
+        self.port = self._setup_serial_port()
+        if self.port is None:
+            if DEBUG:
+                print("[UART]: Failed to setup serial port. Exiting.")
+            return
 
         self.hte = hteClock.HTEClockEvent("/dev/hte_clock0")
 
-    def send_raw(self, data: bytes):
-        if not isinstance(data, bytes):
-            raise TypeError("send_raw expects bytes")
+        # Clear any existing data in buffer
+        self.port.reset_input_buffer()
+        self.port.reset_output_buffer()
 
-        total_sent = 0
+    def get_camera_to_ballistic_transformation(self, milliseconds_in_the_past: int) -> npt.NDArray[np.float64] | None:
+        if self._send_query_to_embedded(milliseconds_in_the_past):
+            if (message := self._read_transformation_message()) is not None:
+                return message.yaw, message.pitch, np.array([*message.matrix], dtype=np.float64).reshape((4,4))
 
-        while total_sent < len(data):
-            sent = self.dev.write(data[total_sent:])
+        return None # Something failed
 
-            if sent is None or sent <= 0:
-                raise OSError("Serial write made no progress")
-
-            total_sent += sent
-
-    def send_packet(self, packet):
-        payload = packet.pack()
-        framed_packet = MAGIC + payload + bytes([checksum8(payload)])
-        self.send_raw(framed_packet)
-
-    def send_query(self, timestamp: int, request_number: int):
-        packet = commStructs.QueryPacket(
-            timestamp=timestamp, requestNumber=request_number
+    def send_angles_to_embedded(self, pitch: float, yaw: float, timeUntilNextFire: int, \
+                                 cvState: CVState, magic: str = '69', messageType: str = 'd') -> bool:
+        """Send JetsonMessage to embedded system"""
+        message = JetsonMessage(
+            magic=ord(magic),
+            messageType=ord(messageType),
+            pitch=float(pitch),
+            yaw=float(yaw),
+            timeUntilNextFire=c_uint8(timeUntilNextFire),
+            cvState=c_uint8(cvState).value
         )
-
-        self.send_packet(packet)
-
-    def receive_chunk(self, timeout=None):
-        if timeout is None:
-            timeout = self.timeout
-
-        previous_timeout = self.dev.timeout
-        self.dev.timeout = timeout / 1000.0
+        if DEBUG:
+            print(f'[UART]: Sending message to embedded:')
+            print(f'  magic={chr(message.magic)}, messageType={chr(message.messageType)}')
+            print(f'  pitch={message.pitch:.4f} radians ({message.pitch * 180 / np.pi:.2f} degrees)')
+            print(f'  yaw={message.yaw:.4f} radians ({message.yaw * 180 / np.pi:.2f} degrees)')
+            print(f'  timeUntilNextFire={message.timeUntilNextFire} ms')
+            print(f'  cvState={message.cvState}')
 
         try:
-            return self.dev.read(self.packet_size)
-        finally:
-            self.dev.timeout = previous_timeout
+            self.port.write(bytes(message))
+            if DEBUG:
+                print(f'[UART]: Message sent successfully ({len(bytes(message))} bytes)')
+            return True
+        except Exception as error:
+            if DEBUG:
+                print(f'[UART]: Error sending message: {error}')
+            return False
 
-    def read_exact(self, num_bytes: int, timeout=None) -> Optional[bytes]:
-        if timeout is None:
-            timeout = self.timeout
-
-        deadline = time.monotonic() + timeout / 1000.0
-
-        while len(self.rx_buffer) < num_bytes:
-            remaining_time = deadline - time.monotonic()
-
-            if remaining_time <= 0:
-                partial_len = len(self.rx_buffer)
-                self.rx_buffer = b""
-                print(
-                    f"Timed out waiting for {num_bytes} bytes. "
-                    f"Only received {partial_len} bytes."
-                )
-                return None
-
-            chunk_timeout_ms = max(1, int(remaining_time * 1000))
-            chunk = self.receive_chunk(timeout=chunk_timeout_ms)
-
-            if chunk:
-                self.rx_buffer += chunk
-
-        data = self.rx_buffer[:num_bytes]
-        self.rx_buffer = self.rx_buffer[num_bytes:]
-
-        return data
-
-    def wait_for_magic(self, timeout=None):
-        if timeout is None:
-            timeout = self.timeout
-
-        deadline = time.monotonic() + timeout / 1000.0
-
-        while True:
-            idx = self.rx_buffer.find(MAGIC)
-
-            if idx >= 0:
-                self.rx_buffer = self.rx_buffer[idx + len(MAGIC) :]
-                return True
-
-            if len(self.rx_buffer) > len(MAGIC) - 1:
-                self.rx_buffer = self.rx_buffer[-(len(MAGIC) - 1) :]
-
-            remaining_time = deadline - time.monotonic()
-
-            if remaining_time <= 0:
-                print("Timed out waiting for packet magic")
-                return False
-
-            chunk_timeout_ms = max(1, int(remaining_time * 1000))
-            chunk = self.receive_chunk(timeout=chunk_timeout_ms)
-
-            if chunk:
-                self.rx_buffer += chunk
-
-    def read_packet(self, packet_class, timeout=None):
-        if timeout is None:
-            timeout = self.timeout
-
-        deadline = time.monotonic() + timeout / 1000.0
-
-        while True:
-            remaining_time = deadline - time.monotonic()
-
-            if remaining_time <= 0:
-                raise TimeoutError("Timed out waiting for valid framed packet")
-
-            if not self.wait_for_magic(timeout=int(remaining_time * 1000)):
-                return None
-
-            remaining_time = deadline - time.monotonic()
-
-            if remaining_time <= 0:
-                print("Timed out after packet magic")
-                return None
-
-            payload = self.read_exact(
-                packet_class.SIZE, timeout=int(remaining_time * 1000)
+    def _setup_serial_port(self) -> serial.Serial | None:
+        """Setup and return serial port connection"""
+        if DEBUG:
+            print(f'[UART]: Setting up port={SERIAL_PORT}, baudrate={BAUDRATE}')
+        try:
+            return serial.Serial(
+                SERIAL_PORT,
+                baudrate=BAUDRATE,
+                timeout=1.0,
+                bytesize=serial.EIGHTBITS,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE
             )
+        except Exception as error:
+            if DEBUG:
+                print(f'[UART]: Error setting up serial port: {error}')
+            import subprocess
+            # Attempt to fix permissions (similar to existing code)
+            try:
+                subprocess.run(["bash", "-c", f"sudo -S chmod 777 '{SERIAL_PORT}' <<<  \"$(cat \"$HOME/.pass\")\" "],
+                             check=False)
+                return self._setup_serial_port()  # retry
+            except:
+                raise
 
-            if payload is None:
-                return None
-
-            remaining_time = deadline - time.monotonic()
-
-            if remaining_time <= 0:
-                print("Timed out waiting for checksum")
-                return None
-
-            received_checksum = self.read_exact(1, timeout=int(remaining_time * 1000))
-            if not received_checksum:
-                print("Timed out waiting for checksum")
-                return None
-
-            received_checksum = received_checksum[0]
-            calculated_checksum = checksum8(payload)
-
-            if received_checksum == calculated_checksum:
-                return packet_class.unpack(payload)
-
-            print(
-                "Bad checksum. Expected",
-                calculated_checksum,
-                "got",
-                received_checksum,
-                "- resyncing...",
-            )
-
-    def drain_rx(self):
-        self.rx_buffer = b""
-
-        while True:
-            chunk = self.receive_chunk(timeout=10)
-
-            if not chunk:
-                break
-
-    def query_gimbal(self, timestamp=0, timeout=None, flush_stale=False):
-        if flush_stale:
-            self.drain_rx()
-
-        self.send_query(
-            timestamp=timestamp, request_number=commStructs.REQUEST_GIMBAL_POS
+    def _send_query_to_embedded(self, frameDelay_ms: int, magic: str = '69', \
+                               messageType: str = 't') -> bool:
+        """Send query to embedded with magic, messageType, and frame delay"""
+        query = QueryToEmbedded(
+            magic=ord(magic),
+            messageType=ord(messageType),
+            frameDelay_ms=c_uint8(frameDelay_ms).value
         )
 
-        return self.read_packet(commStructs.GimbalPacket, timeout=timeout)
+        if DEBUG:
+            print(f'[UART]: Sending query to embedded:')
+            print(f'  magic={chr(query.magic)}, messageType={chr(query.messageType)}')
+            print(f'  frameDelay_ms={query.frameDelay_ms}ms')
 
-    def reset_start_pulse(self):
+        try:
+            self.port.write(bytes(query))
+            if DEBUG:
+                print(f'[UART]: Query sent successfully ({len(bytes(query))} bytes)')
+            return True
+        except Exception as error:
+            if DEBUG:
+                print(f'[UART]: Error sending query: {error}')
+            return False
+
+
+    def reset_start_pulse(self) -> tuple[int | None, int | None]:
+        """Reset the HTE start pulse and wait for the next significant gap."""
+        self.hte.start_pulse = None
+        self.hte.start_time = None
+        self.hte.reset_start_pulse()
+        return self.hte.start_pulse, self.hte.start_time
+
+    def update_hte(self) -> int | None:
+        """Read the latest HTE event and return its pulse relative to startup."""
+        self.hte.update()
+
+        if self.hte.current_pulse is None or self.hte.start_pulse is None:
+            return None
+
+        return self.hte.current_pulse - self.hte.start_pulse
+
+    def reset_hte_clock(self) -> tuple[int | None, int | None]:
+        """Request an HTE reset from the embedded system and re-arm the HTE clock."""
+        port = self.port
+        if port is None:
+            raise RuntimeError("Cannot reset HTE clock without an open serial port")
+
         self.hte.start_pulse = None
         self.hte.start_time = None
 
         while self.hte.start_pulse is None:
-            self.send_query(timestamp=0, request_number=commStructs.REQUEST_RESET)
+            reset_message = QueryToEmbedded(
+                magic=ord('69'),
+                messageType=HTE_RESET_MESSAGE_TYPE,
+                frameDelay_ms=0,
+            )
+            port.write(bytes(reset_message))
             self.hte.reset_start_pulse()
 
         return self.hte.start_pulse, self.hte.start_time
 
-    def close(self):
-        if self.dev.is_open:
-            self.dev.close()
+    def _read_transformation_message(self) -> EmbeddedTransformationMessage | None:
+        """Wait for and read EmbeddedTransformationMessage from UART"""
+        expected_size = sizeof(EmbeddedTransformationMessage())
+        if DEBUG:
+            print(f'[UART]: Waiting for transformation message ({expected_size} bytes)...')
 
-        self.hte.close()
+        # Wait until we have enough bytes
+        start_time = time.time()
+        timeout = 5.0  # 5 second timeout
+
+        while self.port.in_waiting < expected_size:
+            if time.time() - start_time > timeout:
+                if DEBUG:
+                    print(f'[UART]: Timeout waiting for message (have {self.port.in_waiting} bytes, need {expected_size})')
+                return None
+            time.sleep(0.01)  # Small delay to avoid busy waiting
+            if DEBUG:
+                print(f'[UART]: Currently {self.port.in_waiting} bytes in port')
+
+        # Read the exact number of bytes needed
+        data = self.port.read(expected_size)
+
+        if len(data) != expected_size:
+            if DEBUG:
+                print(f'[UART]: Read {len(data)} bytes, expected {expected_size}')
+            return None
+
+        # Cast to struct
+        transformation = EmbeddedTransformationMessage.from_buffer_copy(data)
+
+        return transformation
+
+    def close(self) -> None:
+        """Close the UART and HTE resources."""
+        port = getattr(self, "port", None)
+        if port is not None and port.is_open:
+            port.close()
+
+        hte = getattr(self, "hte", None)
+        if hte is not None:
+            hte.close()
 
 
 if __name__ == "__main__":
-    PORT = "/dev/ttyTHS1"
-    BAUDRATE = 460800
-
-    serial_dev = serial_comms(PORT, baudrate=BAUDRATE, packet_size=64, timeout=1000)
-
-    print("starting ...")
+    communicator = EmbeddedCommunicator()
 
     try:
-        serial_dev.drain_rx()
-        time.sleep(0.5)
-
-        start_pulse, start_time = serial_dev.reset_start_pulse()
-
-        time.sleep(1)
-
-        print("Start pulse:", start_pulse)
-        print("Start time:", start_time)
-
-        serial_dev.drain_rx()
+        print("Sending HTE reset message (message type 3)...")
+        start_pulse, start_time = communicator.reset_hte_clock()
+        print("HTE start pulse:", start_pulse)
+        print("HTE start time:", start_time)
 
         while True:
-            serial_dev.hte.update()
-
-            if serial_dev.hte.current_pulse is None:
-                continue
-
-            timestamp = serial_dev.hte.current_pulse - serial_dev.hte.start_pulse
-
-            print("Jetson pulse", timestamp)
-
-            gimbal = serial_dev.query_gimbal(timestamp=timestamp, timeout=1000)
-
-            if gimbal is None:
-                print("Failed to receive gimbal data")
-                continue
-
+            relative_pulse = communicator.update_hte()
             print(
-                "Received gimbal:",
-                "timestamp =",
-                gimbal.timestamp,
-                "yaw =",
-                gimbal.yaw,
-                "pitch =",
-                gimbal.pitch,
+                "Current HTE pulse:",
+                communicator.hte.current_pulse,
+                "Relative pulse:",
+                relative_pulse,
             )
-            time.sleep(0.05)
-
     except KeyboardInterrupt:
         print("\nCtrl+C received.")
-        serial_dev.send_query(timestamp=0, request_number=commStructs.REQUEST_RESET)
-        time.sleep(0.05)
-
     finally:
-        serial_dev.close()
-        print("done")
+        communicator.close()
