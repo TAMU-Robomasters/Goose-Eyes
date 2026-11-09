@@ -61,6 +61,7 @@ class HTEClockEvent:
 
         previous_timestamp = self._last_reset_timestamp
         self.update(timeout=0)
+        print(f'[HTE]: Previous timestamp: {previous_timestamp}, Current timestamp: {self.current_timestamp}')
 
         if self.current_timestamp is None:
             return self.start_pulse, self.start_time
@@ -101,10 +102,11 @@ if __name__ == "__main__":
         )
         while True:
             clock_event.update()
+            pin_state = "HIGH" if clock_event.edge else "LOW"
             print(
                 clock_event.current_timestamp,
                 clock_event.current_pulse,
                 clock_event.gpio,
-                clock_event.edge,
+                pin_state,
             )
             time.sleep(1)
