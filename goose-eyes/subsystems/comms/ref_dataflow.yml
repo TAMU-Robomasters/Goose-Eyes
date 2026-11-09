@@ -20,3 +20,20 @@ nodes:
       REF_LOG: referee_log.jsonl # relative to where you run `dora start`
     inputs:
       referee: referee/referee
+
+  - id: ref_service
+    path: ref_service.py
+    inputs:
+      referee: referee/referee
+      hurt_request: hurt_client/hurt_request
+    outputs:
+      - response
+
+  - id: hurt_client
+    path: hurt_client.py
+    inputs:
+      tick: dora/timer/millis/500
+      response: ref_service/response
+    outputs:
+      - hurt_request
+
