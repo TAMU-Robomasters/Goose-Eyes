@@ -210,16 +210,17 @@ class EmbeddedCommunicator():
 
         self.hte.start_pulse = None
         self.hte.start_time = None
+        self.hte._last_reset_timestamp = None
+
+        reset_message = QueryToEmbeddedReset(
+            magic=ord('a'),
+            messageType=ord('c'),
+            some_bs=1,
+        )
 
         while self.hte.start_pulse is None:
-            reset_message = QueryToEmbeddedReset(
-                magic=ord('a'),
-                messageType=ord('c'),
-                some_bs=1,
-            )
-            print("Loop")
             port.write(bytes(reset_message))
-            # self.hte.reset_start_pulse()
+            self.hte.reset_start_pulse()
 
         return self.hte.start_pulse, self.hte.start_time
 

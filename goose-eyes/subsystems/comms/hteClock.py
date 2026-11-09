@@ -15,12 +15,16 @@ class HTEClockEvent:
         self.edge = None
         self.start_pulse = None
         self.start_time = None
+        self._last_reset_timestamp = None
 
         self.FMT = "<QQII"
         self.event_size = struct.calcsize(self.FMT)
 
-    def update(self):
-        self.poller.poll()
+    def update(self, timeout=None):
+        """Read available HTE events, optionally without waiting for one."""
+        poll_timeout = -1 if timeout is None else timeout
+        if not self.poller.poll(poll_timeout):
+            return self
 
         latest = None
 
@@ -47,28 +51,28 @@ class HTEClockEvent:
 
     def reset_start_pulse(self):
         """
-        Reset the start pulse of the HTE clock.
+        Check for a significant gap and update the start pulse if one is found.
 
-        Waits for a significant time delta between consecutive events to determine the start pulse.
-        Sets the start pulse and start time once detected.
+        This method performs one non-blocking HTE poll. Call it repeatedly while
+        performing other work, such as retransmitting the reset request.
         """
-        last_timestamp = None
+        if self.start_pulse is not None:
+            return self.start_pulse, self.start_time
 
-        start_timeout = time.time()
+        previous_timestamp = self._last_reset_timestamp
+        self.update(timeout=0)
 
-        while self.start_pulse is None:
-            self.update()
-            if last_timestamp is not None:
-                delta = self.current_timestamp - last_timestamp
-                if delta > 0.25e9:
-                    self.start_pulse = self.current_pulse + 1
-                    self.start_time = self.current_timestamp
+        if self.current_timestamp is None:
+            return self.start_pulse, self.start_time
 
-            last_timestamp = self.current_timestamp
+        if previous_timestamp is not None and self.current_pulse is not None:
+            delta = self.current_timestamp - previous_timestamp
+            if delta > 0.25e9:
+                self.start_pulse = self.current_pulse + 1
+                self.start_time = self.current_timestamp
 
-            if time.time() - start_timeout > 3:  # 5-second timeout
-                print("Timeout waiting for start pulse.")
-                break
+        self._last_reset_timestamp = self.current_timestamp
+        return self.start_pulse, self.start_time
 
     def close(self):
         if self.dev is not None:
