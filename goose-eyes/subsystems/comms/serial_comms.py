@@ -14,7 +14,7 @@ import numpy as np
 import numpy.typing as npt
 
 SERIAL_PORT: str = "/dev/ttyTHS1"
-BAUDRATE: int = 460800
+BAUDRATE: int = 115200
 DEBUG = True
 
 class CVState(Enum):
@@ -61,11 +61,11 @@ class QueryToEmbeddedReset(Structure):
     _fields_ = [
         ("magic", c_uint8),
         ("messageType", c_uint8),
-        ("some_bs", c_bool),  # frame delay in milliseconds
+        ("some_bs", c_uint8),  # frame delay in milliseconds
     ]
     magic: int
     messageType: int
-    frameDelay_ms: int
+    some_bs: bool
 
 
 HTE_RESET_MESSAGE_TYPE = 3
@@ -214,11 +214,12 @@ class EmbeddedCommunicator():
         while self.hte.start_pulse is None:
             reset_message = QueryToEmbeddedReset(
                 magic=ord('a'),
-                messageType=HTE_RESET_MESSAGE_TYPE,
+                messageType=ord('c'),
                 some_bs=1,
             )
+            print("Loop")
             port.write(bytes(reset_message))
-            self.hte.reset_start_pulse()
+            # self.hte.reset_start_pulse()
 
         return self.hte.start_pulse, self.hte.start_time
 
@@ -269,19 +270,20 @@ if __name__ == "__main__":
     communicator = EmbeddedCommunicator()
 
     try:
-        print("Sending HTE reset message (message type 3)...")
-        start_pulse, start_time = communicator.reset_hte_clock()
-        print("HTE start pulse:", start_pulse)
-        print("HTE start time:", start_time)
+        
 
         while True:
+            print("Sending HTE reset message (message type 3)...")
+            start_pulse, start_time = communicator.reset_hte_clock()
+            print("HTE start pulse:", start_pulse)
+            print("HTE start time:", start_time)
             relative_pulse = communicator.update_hte()
-            print(
-                "Current HTE pulse:",
-                communicator.hte.current_pulse,
-                "Relative pulse:",
-                relative_pulse,
-            )
+            # print(
+            #     "Current HTE pulse:",
+            #     communicator.hte.current_pulse,
+            #     "Relative pulse:",
+            #     relative_pulse,
+            # )
     except KeyboardInterrupt:
         print("\nCtrl+C received.")
     finally:
