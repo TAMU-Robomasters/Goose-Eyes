@@ -76,14 +76,6 @@ opencv = ">=4.13.0,<5"
 # wire format.
 rerun-sdk = ">=0.38.1, <0.39"
 
-[feature.dev.target.linux-64.dependencies]
-# conda-forge libopencv 4.13.0 build _620 links libabseil 2608 without declaring it, while libprotobuf
-# pulls libabseil 2605, so `import cv2` dies on a missing libabsl_*.so.2608. _619 is consistent; drop
-# this cap once a fixed build lands (check: `ldd .pixi/envs/dev/lib/libopencv_dnn.so* | grep "not found"`).
-# ROS (navigation2 → cv_bridge) also pulls py-opencv into the default env; the shared solve-group
-# carries this cap there too.
-libopencv = { version = ">=4.13.0,<5", build-number = "<620" }
-
 # ---- Docs (MkDocs) -----------------------------------------------------------------------------
 # Separate feature so the runtime env doesn't carry the docs toolchain; `pixi run docs*` picks the
 # `docs` environment automatically because the tasks are only defined there. Same solve-group as the
@@ -121,6 +113,8 @@ fmt = "ruff format --check"
 fmt-fix = "ruff format"
 
 [environments]
+# The default env must be listed to join the group; a solve-group name alone doesn't include it.
+default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
 lint = { features = ["lint"], no-default-feature = true }

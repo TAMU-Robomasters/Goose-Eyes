@@ -16,8 +16,7 @@ mechanics.
     platforms = ["osx-arm64", "linux-64", "osx-64"]
     ```
 
-    If a substitute needs a per-platform tweak, put it in `[feature.dev.target.<platform>.*]` (linux-64
-    has one: a `libopencv` build cap, see the comment there).
+    If a substitute needs a per-platform tweak, put it in `[feature.dev.target.<platform>.*]`.
 3. **Re-solve and install** — [`pixi lock`](https://pixi.sh/latest/reference/cli/pixi/lock/) solves
    the lock for every platform (this is where you find out if a dependency doesn't exist for the new
    one; ROS 2 from RoboStack is the likely culprit), then `pixi install -e dev`. Commit the whole `pixi.lock`.
