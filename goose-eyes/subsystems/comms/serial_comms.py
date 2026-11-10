@@ -271,20 +271,20 @@ if __name__ == "__main__":
     communicator = EmbeddedCommunicator()
 
     try:
-        
+        print("Sending HTE reset message (message type 3)...")
+        start_pulse, start_time = communicator.reset_hte_clock()
+        print("HTE start pulse:", start_pulse)
+        print("HTE start time:", start_time)
+        relative_pulse = communicator.update_hte()
 
         while True:
-            print("Sending HTE reset message (message type 3)...")
-            start_pulse, start_time = communicator.reset_hte_clock()
-            print("HTE start pulse:", start_pulse)
-            print("HTE start time:", start_time)
-            relative_pulse = communicator.update_hte()
-            # print(
-            #     "Current HTE pulse:",
-            #     communicator.hte.current_pulse,
-            #     "Relative pulse:",
-            #     relative_pulse,
-            # )
+            
+            print(
+                "Current HTE pulse:",
+                communicator.hte.current_pulse,
+                "Relative pulse:",
+                relative_pulse,
+            )
     except KeyboardInterrupt:
         print("\nCtrl+C received.")
     finally:
