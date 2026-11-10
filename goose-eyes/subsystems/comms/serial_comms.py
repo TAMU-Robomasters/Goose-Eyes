@@ -275,10 +275,10 @@ if __name__ == "__main__":
         start_pulse, start_time = communicator.reset_hte_clock()
         print("HTE start pulse:", start_pulse)
         print("HTE start time:", start_time)
-        relative_pulse = communicator.update_hte()
 
         while True:
-            
+            relative_pulse = communicator.update_hte()
+
             print(
                 "Current HTE pulse:",
                 communicator.hte.current_pulse,

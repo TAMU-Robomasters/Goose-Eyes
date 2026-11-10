@@ -93,20 +93,23 @@ if __name__ == "__main__":
 
     with HTEClockEvent("/dev/hte_clock0") as clock_event:
         print("Resetting start pulse...")
-        clock_event.reset_start_pulse()
-        print(
-            "Start pulse:",
-            clock_event.start_pulse,
-            "Start time:",
-            clock_event.start_time,
-        )
+        # clock_event.reset_start_pulse()
+        # print(
+        #     "Start pulse:",
+        #     clock_event.start_pulse,
+        #     "Start time:",
+        #     clock_event.start_time,
+        # )
+        last_loop_pulse = 0
         while True:
             clock_event.update()
             pin_state = "HIGH" if clock_event.edge else "LOW"
-            print(
-                clock_event.current_timestamp,
-                clock_event.current_pulse,
-                clock_event.gpio,
-                pin_state,
-            )
+            # print(
+            #     clock_event.current_timestamp,
+            #     clock_event.current_pulse,
+            #     clock_event.gpio,
+            #     pin_state,
+            # )
+            print("Change in pulse:", clock_event.current_pulse - last_loop_pulse)
+            last_loop_pulse = clock_event.current_pulse
             time.sleep(1)
