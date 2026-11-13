@@ -2,7 +2,7 @@
 UART communication to send messages to embedded system and receive transformation matrix data for auto aim.
 """
 
-from ctypes import Structure, c_ubyte, c_uint8, c_float, sizeof, Array, c_bool
+from ctypes import Structure, c_ubyte, c_uint32, c_uint8, c_float, sizeof, Array, c_bool
 from enum import Enum
 from typing import List
 
@@ -15,7 +15,7 @@ import numpy.typing as npt
 
 SERIAL_PORT: str = "/dev/ttyTHS1"
 BAUDRATE: int = 115200
-DEBUG = True
+DEBUG = False
 
 class CVState(Enum):
     PANEL_NOT_IN_VIEW: int = 0
@@ -49,11 +49,11 @@ class QueryToEmbedded(Structure):
     _fields_ = [
         ("magic", c_uint8),
         ("messageType", c_uint8),
-        ("frameDelay_ms", c_uint8),  # frame delay in milliseconds
+        ("pulse", c_uint32),  # clock pulse
     ]
     magic: int
     messageType: int
-    frameDelay_ms: int
+    pulse: int
 
 class QueryToEmbeddedReset(Structure):
     """Query struct to send to embedded system with magic, messageType, and frame delay"""
@@ -100,8 +100,8 @@ class EmbeddedCommunicator():
         self.port.reset_input_buffer()
         self.port.reset_output_buffer()
 
-    def get_camera_to_ballistic_transformation(self, milliseconds_in_the_past: int) -> npt.NDArray[np.float64] | None:
-        if self._send_query_to_embedded(milliseconds_in_the_past):
+    def get_camera_to_ballistic_transformation(self, pulse: int) -> npt.NDArray[np.float64] | None:
+        if self._send_query_to_embedded(pulse):
             if (message := self._read_transformation_message()) is not None:
                 return message.yaw, message.pitch, np.array([*message.matrix], dtype=np.float64).reshape((4,4))
 
@@ -161,19 +161,19 @@ class EmbeddedCommunicator():
             except:
                 raise
 
-    def _send_query_to_embedded(self, frameDelay_ms: int, magic: str = 'a', \
+    def _send_query_to_embedded(self, pulse: int, magic: str = 'a', \
                                messageType: str = 't') -> bool:
         """Send query to embedded with magic, messageType, and frame delay"""
         query = QueryToEmbedded(
             magic=ord(magic),
             messageType=ord(messageType),
-            frameDelay_ms=c_uint8(frameDelay_ms).value
+            pulse=c_uint32(pulse).value
         )
 
         if DEBUG:
             print(f'[UART]: Sending query to embedded:')
             print(f'  magic={chr(query.magic)}, messageType={chr(query.messageType)}')
-            print(f'  frameDelay_ms={query.frameDelay_ms}ms')
+            print(f'  pulse={query.pulse}')
 
         try:
             self.port.write(bytes(query))
@@ -285,6 +285,10 @@ if __name__ == "__main__":
                 "Relative pulse:",
                 relative_pulse,
             )
+            transformation = communicator.get_camera_to_ballistic_transformation(relative_pulse-(40*5))
+            if transformation is not None:
+                print("Camera to ballistic transformation:\n", transformation)
+            
     except KeyboardInterrupt:
         print("\nCtrl+C received.")
     finally:
