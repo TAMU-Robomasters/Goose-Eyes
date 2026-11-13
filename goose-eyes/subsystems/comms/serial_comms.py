@@ -1,20 +1,16 @@
-"""
-UART communication to send messages to embedded system and receive transformation matrix data for auto aim.
-"""
+"""USB CDC communication with the embedded development board."""
 
-from ctypes import Structure, c_ubyte, c_uint8, c_float, sizeof, Array, c_bool
+from ctypes import Structure, c_uint8, c_uint16, c_float, sizeof
 from enum import Enum
 from typing import List
 
-from numpy.testing import print_assert_equal
-import hteClock
 import serial
 import time
 import numpy as np
 import numpy.typing as npt
 
-SERIAL_PORT: str = "/dev/ttyTHS1"
-BAUDRATE: int = 115200
+SERIAL_PORT: str = "/dev/ttyACM0"
+BAUDRATE: int = 460800
 DEBUG = True
 
 class CVState(Enum):
@@ -32,7 +28,7 @@ class JetsonMessage(Structure):
         ("messageType", c_uint8),
         ("pitch", c_float),  # pitch angle in radians
         ("yaw", c_float),  # yaw angle in radians
-        ("timeUntilNextFire", c_uint8), # in ms. Max value is 255 ms
+        ("timeUntilNextFire", c_uint16), # in ms
         ("cvState", c_uint8),  # CVState (assuming uint8_t) // 1 if a panel is detected
     ]
     magic: int
@@ -54,22 +50,6 @@ class QueryToEmbedded(Structure):
     magic: int
     messageType: int
     frameDelay_ms: int
-
-class QueryToEmbeddedReset(Structure):
-    """Query struct to send to embedded system with magic, messageType, and frame delay"""
-    _pack_ = 1
-    _fields_ = [
-        ("magic", c_uint8),
-        ("messageType", c_uint8),
-        ("some_bs", c_uint8),  # frame delay in milliseconds
-    ]
-    magic: int
-    messageType: int
-    some_bs: bool
-
-
-HTE_RESET_MESSAGE_TYPE = 3
-
 
 class EmbeddedTransformationMessage(Structure):
     """Response struct from embedded system with transformation matrix"""
@@ -94,8 +74,6 @@ class EmbeddedCommunicator():
                 print("[UART]: Failed to setup serial port. Exiting.")
             return
 
-        self.hte = hteClock.HTEClockEvent("/dev/hte_clock0")
-
         # Clear any existing data in buffer
         self.port.reset_input_buffer()
         self.port.reset_output_buffer()
@@ -115,8 +93,8 @@ class EmbeddedCommunicator():
             messageType=ord(messageType),
             pitch=float(pitch),
             yaw=float(yaw),
-            timeUntilNextFire=c_uint8(timeUntilNextFire),
-            cvState=c_uint8(cvState).value
+            timeUntilNextFire=c_uint16(timeUntilNextFire).value,
+            cvState=c_uint8(cvState.value).value
         )
         if DEBUG:
             print(f'[UART]: Sending message to embedded:')
@@ -152,14 +130,7 @@ class EmbeddedCommunicator():
         except Exception as error:
             if DEBUG:
                 print(f'[UART]: Error setting up serial port: {error}')
-            import subprocess
-            # Attempt to fix permissions (similar to existing code)
-            try:
-                subprocess.run(["bash", "-c", f"sudo -S chmod 777 '{SERIAL_PORT}' <<<  \"$(cat \"$HOME/.pass\")\" "],
-                             check=False)
-                return self._setup_serial_port()  # retry
-            except:
-                raise
+            return None
 
     def _send_query_to_embedded(self, frameDelay_ms: int, magic: str = 'a', \
                                messageType: str = 't') -> bool:
@@ -185,44 +156,6 @@ class EmbeddedCommunicator():
                 print(f'[UART]: Error sending query: {error}')
             return False
 
-
-    def reset_start_pulse(self) -> tuple[int | None, int | None]:
-        """Reset the HTE start pulse and wait for the next significant gap."""
-        self.hte.start_pulse = None
-        self.hte.start_time = None
-        self.hte.reset_start_pulse()
-        return self.hte.start_pulse, self.hte.start_time
-
-    def update_hte(self) -> int | None:
-        """Read the latest HTE event and return its pulse relative to startup."""
-        self.hte.update()
-
-        if self.hte.current_pulse is None or self.hte.start_pulse is None:
-            return None
-
-        return self.hte.current_pulse - self.hte.start_pulse
-
-    def reset_hte_clock(self) -> tuple[int | None, int | None]:
-        """Request an HTE reset from the embedded system and re-arm the HTE clock."""
-        port = self.port
-        if port is None:
-            raise RuntimeError("Cannot reset HTE clock without an open serial port")
-
-        self.hte.start_pulse = None
-        self.hte.start_time = None
-        self.hte._last_reset_timestamp = None
-
-        reset_message = QueryToEmbeddedReset(
-            magic=ord('a'),
-            messageType=ord('c'),
-            some_bs=1,
-        )
-
-        while self.hte.start_pulse is None:
-            port.write(bytes(reset_message))
-            self.hte.reset_start_pulse()
-
-        return self.hte.start_pulse, self.hte.start_time
 
     def _read_transformation_message(self) -> EmbeddedTransformationMessage | None:
         """Wait for and read EmbeddedTransformationMessage from UART"""
@@ -257,34 +190,17 @@ class EmbeddedCommunicator():
         return transformation
 
     def close(self) -> None:
-        """Close the UART and HTE resources."""
+        """Close the USB serial resource."""
         port = getattr(self, "port", None)
         if port is not None and port.is_open:
             port.close()
-
-        hte = getattr(self, "hte", None)
-        if hte is not None:
-            hte.close()
-
 
 if __name__ == "__main__":
     communicator = EmbeddedCommunicator()
 
     try:
-        
-
         while True:
-            print("Sending HTE reset message (message type 3)...")
-            start_pulse, start_time = communicator.reset_hte_clock()
-            print("HTE start pulse:", start_pulse)
-            print("HTE start time:", start_time)
-            relative_pulse = communicator.update_hte()
-            # print(
-            #     "Current HTE pulse:",
-            #     communicator.hte.current_pulse,
-            #     "Relative pulse:",
-            #     relative_pulse,
-            # )
+            time.sleep(1)
     except KeyboardInterrupt:
         print("\nCtrl+C received.")
     finally:
