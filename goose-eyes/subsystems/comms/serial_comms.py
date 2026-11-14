@@ -11,7 +11,7 @@ import numpy.typing as npt
 
 SERIAL_PORT: str = "/dev/ttyACM0"
 BAUDRATE: int = 460800
-DEBUG = True
+DEBUG = False
 
 class CVState(Enum):
     PANEL_NOT_IN_VIEW: int = 0
@@ -200,7 +200,10 @@ if __name__ == "__main__":
 
     try:
         while True:
-            time.sleep(1)
+            transformation = communicator.get_camera_to_ballistic_transformation(10)
+            if transformation is not None:
+                print(f'Received transformation: \n{transformation}')
+            
     except KeyboardInterrupt:
         print("\nCtrl+C received.")
     finally:
