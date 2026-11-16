@@ -2,6 +2,9 @@ import cv2
 import numpy as np
 from dora import Node
 
+FOV = 120
+OFFSET = 120
+
 def getYawValueLeft(frame):
     # camera origin is in top left, so calculate x position of center of camera (we only care about x position for circlet)
     center_x = 1280/2
@@ -15,8 +18,8 @@ def getYawValueLeft(frame):
         rect = cv2.minAreaRect(contour)
         rect_centers.append(rect[0][0]) # append center of bounding box i
     max_cx = max(rect_centers) - center_x # turn the bounding box center values into a centered (pixel, pixel) position
-    cx_to_fov = lambda cx: (120/1280) * cx # function that translates (pixel, pixel) into a degree value
-    return -cx_to_fov(max_cx) - 120 # return the (pixel,pixel) position after it's translated into a yaw value for the turret to move
+    cx_to_fov = lambda cx: (FOV/1280) * cx # function that translates (pixel, pixel) into a degree value
+    return -cx_to_fov(max_cx) - OFFSET # return the (pixel,pixel) position after it's translated into a yaw value for the turret to move
 
 def getYawValueRight(frame):
     center_x = 1280/2
@@ -28,13 +31,11 @@ def getYawValueRight(frame):
         rect = cv2.minAreaRect(contour)
         rect_centers.append(rect[0][0])
     max_cx = center_x - min(rect_centers)
-    cx_to_fov = lambda cx: (120/1280) * cx
-    return cx_to_fov(max_cx) + 120
+    cx_to_fov = lambda cx: (FOV/1280) * cx
+    return cx_to_fov(max_cx) + OFFSET
 
-camera = cv2.VideoCapture(0, cv2.CAP_V4L2)
+camera = cv2.VideoCapture(4, cv2.CAP_V4L2)
 camera2 = cv2.VideoCapture(2, cv2.CAP_V4L2)
-#camera = cv2.VideoCapture(4, cv2.CAP_V4L2)
-#camera2 = cv2.VideoCapture(6, cv2.CAP_V4L2)
 if not camera.isOpened() and not camera2.isOpened():
     raise RuntimeError("Could not open both cameras")
 if not camera.isOpened():
@@ -54,19 +55,25 @@ camera2.set(cv2.CAP_PROP_FPS, 90)
 
 node = Node()
 
-circlet_active = False
+circlet_active = True
 
-for event in node:
-    if event["type"] != "INPUT":
-        continue
+# for event in node:
+#     if event["type"] != "INPUT":
+#         continue
+# 
+    # if event["id"] == "auto-aim-locked":
+        # circlet_active = bool(event["value"].to_pylist()[0])
+        # print(f"Circlet active: {circlet_active}")
 
-    if event["id"] == "auto-aim-locked":
-        circlet_active = bool(event["value"].to_pylist()[0])
-        print(f"Circlet active: {circlet_active}")
-
-    if event["id"] == "tick" and circlet_active:
+    # if event["id"] == "tick" and circlet_active:
+while True:
+    if True:
         ret, frame = camera.read()
         ret2, frame2 = camera2.read()
+        cv2.imshow("camera 1", frame)
+        cv2.imshow("camera 2", frame2)
+        cv2.waitKey(1)
+        #print(frame.shape)
 
         try:
             print(f"left: {getYawValueLeft(frame)}", end=' ')
