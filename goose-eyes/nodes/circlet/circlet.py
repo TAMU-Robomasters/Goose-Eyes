@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 from dora import Node
 
-FOV = 120
-OFFSET = 120
+FOV = 90
+OFFSET = 135
 
 def getYawValueLeft(frame):
     # camera origin is in top left, so calculate x position of center of camera (we only care about x position for circlet)
