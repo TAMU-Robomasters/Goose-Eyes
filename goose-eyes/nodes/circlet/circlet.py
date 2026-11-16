@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 from dora import Node
 
-FOV = 120
-OFFSET = 120
+FOV = 90
+OFFSET = 135
 
 def getYawValueLeft(frame):
     # camera origin is in top left, so calculate x position of center of camera (we only care about x position for circlet)
@@ -34,8 +34,8 @@ def getYawValueRight(frame):
     cx_to_fov = lambda cx: (FOV/1280) * cx
     return cx_to_fov(max_cx) + OFFSET
 
-camera = cv2.VideoCapture(4, cv2.CAP_V4L2)
-camera2 = cv2.VideoCapture(2, cv2.CAP_V4L2)
+camera = cv2.VideoCapture(2, cv2.CAP_V4L2)
+camera2 = cv2.VideoCapture(4, cv2.CAP_V4L2)
 if not camera.isOpened() and not camera2.isOpened():
     raise RuntimeError("Could not open both cameras")
 if not camera.isOpened():
@@ -55,19 +55,19 @@ camera2.set(cv2.CAP_PROP_FPS, 90)
 
 node = Node()
 
-circlet_active = True
+circlet_active = False
 
-# for event in node:
-#     if event["type"] != "INPUT":
-#         continue
+for event in node:
+    if event["type"] != "INPUT":
+        continue
 # 
-    # if event["id"] == "auto-aim-locked":
-        # circlet_active = bool(event["value"].to_pylist()[0])
-        # print(f"Circlet active: {circlet_active}")
+    if event["id"] == "auto-aim-locked":
+        circlet_active = bool(event["value"].to_pylist()[0])
+        print(f"Circlet active: {circlet_active}")
 
-    # if event["id"] == "tick" and circlet_active:
-while True:
-    if True:
+    if event["id"] == "tick" and circlet_active:
+#while True:
+#    if True:
         ret, frame = camera.read()
         ret2, frame2 = camera2.read()
         cv2.imshow("camera 1", frame)
