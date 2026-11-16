@@ -8,6 +8,6 @@ import time
 
 while True:
     node.send_output(
-        "auto-aim-locked", pa.array([random.choice([True, False])], type=pa.bool_())
+        "auto-aim-locked", pa.array([random.choice([False, True])], type=pa.bool_())
     )
     time.sleep(random.random())
