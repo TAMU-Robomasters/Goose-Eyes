@@ -1,6 +1,6 @@
 """USB CDC communication with the embedded development board."""
 
-from ctypes import Structure, c_uint8, c_uint16, c_float, sizeof
+from ctypes import Structure, c_uint8, c_uint16, c_uint32, c_float, sizeof
 from enum import Enum
 from typing import List
 
@@ -49,7 +49,7 @@ class QueryToEmbedded(Structure):
     ]
     magic: int
     messageType: int
-    frameDelay_ms: int
+    pulse: int
 
 class QueryToEmbeddedReset(Structure):
     """Query struct to send to embedded system with magic, messageType, and frame delay"""
@@ -74,11 +74,39 @@ class EmbeddedTransformationMessage(Structure):
         ("magic", c_uint8),
         ("yaw", c_float),  # yaw angle in radians
         ("pitch", c_float),  # pitch angle in radians
+        ("roll", c_float),  # roll angle in radians
         ("matrix", c_float * 16),  # 4x4 transformation matrix (row-major order)
     ]
     magic: int
     yaw: float
     pitch: float
+    roll: float
+    matrix: List[float]
+
+class EmbeddedUniversalPacket(Structure):
+    """Universal packet struct from embedded system"""
+    _pack_ = 1
+    _fields_ = [
+        ("magic", c_uint8),
+        ("currTicks", c_uint32),
+        # odometry information
+        ("x_odom", c_float),
+        ("y_odom", c_float),
+        ("theta_odom", c_float),
+        #transformation for aiming
+        ("yaw", c_float),
+        ("pitch", c_float),
+        ("roll", c_float),
+        ("matrix", c_float * 16)
+    ]
+    magic: int
+    currTicks: int
+    x_odom: float
+    y_odom: float
+    theta_odom: float
+    yaw: float
+    pitch: float
+    roll: float
     matrix: List[float]
 
 
@@ -97,7 +125,14 @@ class EmbeddedCommunicator():
     def get_camera_to_ballistic_transformation(self, pulse: int) -> npt.NDArray[np.float64] | None:
         if self._send_query_to_embedded(pulse):
             if (message := self._read_transformation_message()) is not None:
-                return message.yaw, message.pitch, np.array([*message.matrix], dtype=np.float64).reshape((4,4))
+                return message.yaw, message.pitch, message.roll, np.array([*message.matrix], dtype=np.float64).reshape((4,4))
+
+        return None # Something failed
+
+    def get_universal_message(self) -> EmbeddedUniversalPacket | None:
+        if self._send_query_to_embedded('*'):
+            if (message := self._read_universal_message()) is not None:
+                return message
 
         return None # Something failed
 
@@ -148,13 +183,12 @@ class EmbeddedCommunicator():
                 print(f'[UART]: Error setting up serial port: {error}')
             return None
 
-    def _send_query_to_embedded(self, pulse: int, magic: str = 'a', \
+    def _send_query_to_embedded(self, magic: str = 'a', \
                                messageType: str = 't') -> bool:
         """Send query to embedded with magic, messageType, and frame delay"""
         query = QueryToEmbedded(
             magic=ord(magic),
             messageType=ord(messageType),
-            pulse=c_uint32(pulse).value
         )
 
         if DEBUG:
@@ -205,6 +239,38 @@ class EmbeddedCommunicator():
 
         return transformation
 
+    def _read_universal_message(self) -> EmbeddedUniversalPacket | None:
+        """Wait for and read EmbeddedUniversalPacket from UART"""
+        expected_size = sizeof(EmbeddedUniversalPacket())
+        if DEBUG:
+            print(f'[UART]: Waiting for universal message ({expected_size} bytes)...')
+
+        # Wait until we have enough bytes
+        start_time = time.time()
+        timeout = 5.0  # 5 second timeout
+
+        while self.port.in_waiting < expected_size:
+            if time.time() - start_time > timeout:
+                if DEBUG:
+                    print(f'[UART]: Timeout waiting for message (have {self.port.in_waiting} bytes, need {expected_size})')
+                return None
+            time.sleep(0.01)  # Small delay to avoid busy waiting
+            if DEBUG:
+                print(f'[UART]: Currently {self.port.in_waiting} bytes in port')
+
+        # Read the exact number of bytes needed
+        data = self.port.read(expected_size)
+
+        if len(data) != expected_size:
+            if DEBUG:
+                print(f'[UART]: Read {len(data)} bytes, expected {expected_size}')
+            return None
+
+        # Cast to struct
+        universal_message = EmbeddedUniversalPacket.from_buffer_copy(data)
+
+        return universal_message
+
     def close(self) -> None:
         """Close the USB serial resource."""
         port = getattr(self, "port", None)
@@ -216,9 +282,11 @@ if __name__ == "__main__":
 
     try:
         while True:
-            transformation = communicator.get_camera_to_ballistic_transformation(10)
-            if transformation is not None:
-                print(f'Received transformation: \n{transformation}')
+            universal_message = communicator.get_universal_message()
+            if universal_message is not None:
+                print(f'Received universal message: \n{universal_message}')
+            else:
+                print('No universal message received.')
             
     except KeyboardInterrupt:
         print("\nCtrl+C received.")
