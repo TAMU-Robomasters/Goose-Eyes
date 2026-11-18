@@ -323,15 +323,15 @@ if __name__ == "__main__":
     communicator = EmbeddedCommunicator()
 
     try:
-        start_pulse, start_time = communicator.reset_start_pulse()
-        print("Start pulse:", start_pulse)
-        print("Start time:", start_time)
+        # start_pulse, start_time = communicator.reset_start_pulse()
+        # print("Start pulse:", start_pulse)
+        # print("Start time:", start_time)
 
         while True:
-            timestamp = communicator.update_hte()
+            # timestamp = communicator.update_hte()
             universal_message = communicator.get_universal_message()
             if universal_message is not None:
-                print(f"Jetson pulse: {timestamp}")
+                # print(f"Jetson pulse: {timestamp}")
                 print(f'Received universal message: \n{universal_message}')
             else:
                 print('No universal message received.')
