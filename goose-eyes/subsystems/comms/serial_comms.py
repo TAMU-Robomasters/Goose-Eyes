@@ -116,9 +116,10 @@ class EmbeddedCommunicator():
     def __init__(self):
         self.port = self._setup_serial_port()
         if self.port is None:
-            if DEBUG:
-                print("[UART]: Failed to setup serial port. Exiting.")
-            return
+            raise RuntimeError(
+                f"Failed to setup serial port {SERIAL_PORT} "
+                f"at {BAUDRATE} baud"
+            )
 
         # Clear any existing data in buffer
         self.port.reset_input_buffer()
