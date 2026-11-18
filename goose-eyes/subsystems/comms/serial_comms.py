@@ -9,6 +9,8 @@ import time
 import numpy as np
 import numpy.typing as npt
 
+import hteClock
+
 SERIAL_PORT: str = "/dev/ttyACM0"
 BAUDRATE: int = 460800
 DEBUG = False
@@ -122,6 +124,8 @@ class EmbeddedCommunicator():
         self.port.reset_input_buffer()
         self.port.reset_output_buffer()
 
+        self.hte = hteClock.HTEClockEvent("/dev/hte_clock0")
+
     def get_camera_to_ballistic_transformation(self, pulse: int) -> npt.NDArray[np.float64] | None:
         if self._send_query_to_embedded(pulse):
             if (message := self._read_transformation_message()) is not None:
@@ -206,6 +210,39 @@ class EmbeddedCommunicator():
                 print(f'[UART]: Error sending query: {error}')
             return False
 
+    def reset_start_pulse(self) -> tuple[int | None, int | None]:
+        """Reset the embedded HTE clock and establish the local start pulse."""
+        self.hte.start_pulse = None
+        self.hte.start_time = None
+        self.hte._last_reset_timestamp = None
+
+        reset_frame = bytes(QueryToEmbeddedReset(
+            magic=ord('a'),
+            messageType=HTE_RESET_MESSAGE_TYPE,
+            some_bs=0,
+        ))
+
+        while self.hte.start_pulse is None:
+            try:
+                self.port.write(reset_frame)
+            except Exception as error:
+                if DEBUG:
+                    print(f'[UART]: Error sending HTE reset query: {error}')
+                return None, None
+
+            self.hte.reset_start_pulse()
+            time.sleep(0.01)
+
+        return self.hte.start_pulse, self.hte.start_time
+
+    def update_hte(self) -> int | None:
+        """Poll HTE events and return the pulse relative to the reset point."""
+        self.hte.update(timeout=0)
+
+        if self.hte.current_pulse is None or self.hte.start_pulse is None:
+            return None
+
+        return self.hte.current_pulse - self.hte.start_pulse
 
     def _read_transformation_message(self) -> EmbeddedTransformationMessage | None:
         """Wait for and read EmbeddedTransformationMessage from UART"""
@@ -273,6 +310,10 @@ class EmbeddedCommunicator():
 
     def close(self) -> None:
         """Close the USB serial resource."""
+        hte = getattr(self, "hte", None)
+        if hte is not None:
+            hte.close()
+
         port = getattr(self, "port", None)
         if port is not None and port.is_open:
             port.close()
@@ -281,9 +322,15 @@ if __name__ == "__main__":
     communicator = EmbeddedCommunicator()
 
     try:
+        start_pulse, start_time = communicator.reset_start_pulse()
+        print("Start pulse:", start_pulse)
+        print("Start time:", start_time)
+
         while True:
+            timestamp = communicator.update_hte()
             universal_message = communicator.get_universal_message()
             if universal_message is not None:
+                print(f"Jetson pulse: {timestamp}")
                 print(f'Received universal message: \n{universal_message}')
             else:
                 print('No universal message received.')
