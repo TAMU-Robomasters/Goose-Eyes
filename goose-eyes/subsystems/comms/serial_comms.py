@@ -142,7 +142,7 @@ class EmbeddedCommunicator():
         return None # Something failed
 
     def send_angles_to_embedded(self, pitch: float, yaw: float, timeUntilNextFire: int, \
-                                 cvState: CVState, magic: str = 'a', messageType: str = 'd') -> bool:
+                                 cvState: int, magic: str = 'a', messageType: str = 'd') -> bool:
         """Send JetsonMessage to embedded system"""
         message = JetsonMessage(
             magic=ord(magic),
@@ -150,7 +150,7 @@ class EmbeddedCommunicator():
             pitch=float(pitch),
             yaw=float(yaw),
             timeUntilNextFire=c_uint16(timeUntilNextFire).value,
-            cvState=c_uint8(cvState.value).value
+            cvState=c_uint8(cvState)
         )
         if DEBUG:
             print(f'[UART]: Sending message to embedded:')
@@ -330,6 +330,7 @@ if __name__ == "__main__":
         while True:
             timestamp = communicator.update_hte()
             universal_message = communicator.get_universal_message()
+            communicator.send_angles_to_embedded(0,0,1,0, 'a', 'd')
             if universal_message is not None:
                 print(f"Jetson pulse: {timestamp}")
                 print(f'Received universal message: \n{universal_message.currTicks}')
