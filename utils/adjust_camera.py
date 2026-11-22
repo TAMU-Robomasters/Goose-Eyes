@@ -87,12 +87,21 @@ class CameraSettingsApp(QWidget):
                 raise TypeError("The config must contain named settings and values.")
 
             enemy_color = config.get("enemy_color")
-            if not isinstance(enemy_color, str) or enemy_color.lower() not in ("red", "blue"):
+            if not isinstance(enemy_color, str) or enemy_color.lower() not in (
+                "red",
+                "blue",
+            ):
                 raise ValueError("enemy_color must be red or blue.")
             lower = config.get("lower_threshold")
             upper = config.get("upper_threshold")
-            if type(lower) is not int or type(upper) is not int or not 0 <= lower <= upper <= 255:
-                raise ValueError("Thresholds must be integers: 0 <= lower <= upper <= 255.")
+            if (
+                type(lower) is not int
+                or type(upper) is not int
+                or not 0 <= lower <= upper <= 255
+            ):
+                raise ValueError(
+                    "Thresholds must be integers: 0 <= lower <= upper <= 255."
+                )
 
             camera_index = config.get("camera_index", 0)
             if type(camera_index) is not int or camera_index < 0:
@@ -100,12 +109,17 @@ class CameraSettingsApp(QWidget):
 
             settings = config.get("opencv", {})
             if not isinstance(settings, dict):
-                raise TypeError("opencv must contain property names and numeric values.")
+                raise TypeError(
+                    "opencv must contain property names and numeric values."
+                )
 
             # Validate everything before changing the camera or saving the file.
             for name, value in settings.items():
-                if (not isinstance(name, str) or not name.startswith("CAP_PROP_")
-                        or not hasattr(cv2, name)):
+                if (
+                    not isinstance(name, str)
+                    or not name.startswith("CAP_PROP_")
+                    or not hasattr(cv2, name)
+                ):
                     raise ValueError(f"Unknown OpenCV property: {name}")
                 if type(value) not in (int, float) or not math.isfinite(value):
                     raise ValueError(f"{name} must have a finite numeric value.")
@@ -134,7 +148,14 @@ class CameraSettingsApp(QWidget):
             if rejected:
                 status += " Camera rejected: " + ", ".join(rejected)
             self.status.setText(status)
-        except (TypeError, ValueError, OverflowError, OSError, yaml.YAMLError, cv2.error) as error:
+        except (
+            TypeError,
+            ValueError,
+            OverflowError,
+            OSError,
+            yaml.YAMLError,
+            cv2.error,
+        ) as error:
             QMessageBox.warning(self, "Camera settings", str(error))
 
     def update_preview(self):
