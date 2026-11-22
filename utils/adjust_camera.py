@@ -14,21 +14,25 @@
 #   python utils/adjust_camera.py
 # When finished, leave the environment with: deactivate
 
-from pathlib import Path
 import math
 import os
 import stat
 import sys
+from pathlib import Path
 
 import cv2
 import yaml
 from PyQt5.QtCore import QLibraryInfo, QTimer
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import (
-    QApplication, QLabel, QMessageBox, QPushButton, QPlainTextEdit,
-    QVBoxLayout, QWidget,
+    QApplication,
+    QLabel,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
-
 
 CONFIG_PATH = Path(__file__).with_name("config.yaml")
 
@@ -80,7 +84,7 @@ class CameraSettingsApp(QWidget):
         try:
             config = yaml.safe_load(text)
             if not isinstance(config, dict):
-                raise ValueError("The config must contain named settings and values.")
+                raise TypeError("The config must contain named settings and values.")
 
             enemy_color = config.get("enemy_color")
             if not isinstance(enemy_color, str) or enemy_color.lower() not in ("red", "blue"):
@@ -96,7 +100,7 @@ class CameraSettingsApp(QWidget):
 
             settings = config.get("opencv", {})
             if not isinstance(settings, dict):
-                raise ValueError("opencv must contain property names and numeric values.")
+                raise TypeError("opencv must contain property names and numeric values.")
 
             # Validate everything before changing the camera or saving the file.
             for name, value in settings.items():
@@ -130,7 +134,7 @@ class CameraSettingsApp(QWidget):
             if rejected:
                 status += " Camera rejected: " + ", ".join(rejected)
             self.status.setText(status)
-        except (ValueError, OverflowError, OSError, yaml.YAMLError, cv2.error) as error:
+        except (TypeError, ValueError, OverflowError, OSError, yaml.YAMLError, cv2.error) as error:
             QMessageBox.warning(self, "Camera settings", str(error))
 
     def update_preview(self):
