@@ -1,7 +1,18 @@
-"""Edit config.yaml and preview the camera. Run: python adjust_camera.py
-
-Requires opencv-python, PyYAML, and PyQt5.
-"""
+# Edit config.yaml and preview the camera.
+#
+# One-time setup (run from the repository root):
+#   python3 -m venv utils/.venv
+#   source utils/.venv/bin/activate
+#   python -m pip install opencv-python PyYAML PyQt5
+#
+# On Windows PowerShell, create and activate the environment with:
+#   py -m venv utils/.venv
+#   .\utils\.venv\Scripts\Activate.ps1
+# Then run the same pip install command above.
+#
+# Each time you use the script, activate the environment, then run:
+#   python utils/adjust_camera.py
+# When finished, leave the environment with: deactivate
 
 from pathlib import Path
 import math
