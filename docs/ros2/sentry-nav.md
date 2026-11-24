@@ -64,15 +64,21 @@ Launch arguments: `spin_rate` (chassis spin in rad/s, default 4.0, 0 turns it of
 ### How the sim stands in for the robot
 
 ```
-Nav2 (base_footprint) ──/cmd_vel (global vx, vy)──► sim_chassis ──chassis-frame vx, vy + spin──► Gazebo
+Nav2 (base_footprint) ──/cmd_vel (global vx, vy)──► sim_chassis ──x, y, yaw joint velocities──► Gazebo
                                                        │  └─turret joint velocity (hold heading)─► Gazebo
-          /odom, TF odom→base_footprint→base_link ◄────┘◄──ground-truth pose, joint states────────┘
+          /odom, TF odom→base_footprint→base_link ◄────┘◄──joint positions (x, y, yaw, turret)────┘
 Gazebo LD19 x2 (on the turret) ──/lidar_{left,right}/ldlidar_node/scan──► merger ──/scan (base_footprint)──► AMCL, costmaps
 ```
 
 - **Spin and global velocity, as on the robot.** The firmware takes a world-frame velocity and
   rotates it into the spinning chassis frame (`rotateVector(-orientation)` in aimbots-dev's
-  `chassis_auto_nav_tokyo_command.cpp`). `sim_chassis` does the same, and spins the chassis.
+  `chassis_auto_nav_tokyo_command.cpp`) for its wheel kinematics. The sim has no wheels: the
+  chassis rides planar joints (world-aligned x and y, plus yaw), so `sim_chassis` sends the global
+  velocity straight to the x/y joints and spins the yaw joint.
+- **It stays on the floor.** The planar joints are driven by force-limited velocity controllers, so
+  walls and bunkers stop the robot, and it can't tip or lift off. The chassis collision shape follows
+  the meshes (0.514 m square, corners cut to 0.341 m). A chassis spinning against a wall still rolls
+  along it a little, as a real one would; chassis friction is set to 0.3.
 - **Nav runs on `base_footprint`.** It follows the robot's position but never rotates relative to
   `odom`, so Nav2's `/cmd_vel` is already the global vector. `base_link` is the spinning chassis.
   The sim rewrites `robot_base_frame`/`base_frame_id` in `nav2_params_real_lidar.yaml` at launch;
@@ -87,25 +93,30 @@ Gazebo LD19 x2 (on the turret) ──/lidar_{left,right}/ldlidar_node/scan──
 
 ### Verified (x86 Linux, RTX 3070)
 
-Built and run on 2026-11-23. The chassis spins at about 3.8 rad/s, the turret holds its heading to
-within 0.3°, and a global +x command moves the robot straight (2.7 cm of drift over 1.3 m). AMCL
-stayed within 5 cm of ground truth. A goal from the red zone to the blue zone succeeded in 24 s.
-The return goal failed: the path ran 0.24 m from a bunker face (less than the chassis half-width),
-and with `inflation_radius` equal to `robot_radius` the planner then couldn't find a path out. That
-is nav tuning, not the sim.
+Built and run on 2026-11-23. The chassis spins at about 4 rad/s. The turret held its heading to
+within 0.3° with the earlier drive model; that hasn't been re-measured since the planar joints. Driven into a wall while spinning, the robot stops at the wall and stays on the floor.
+In a scripted run (red zone → blue zone → top-right corner → red zone) every goal succeeded, and
+the true position ended 0.17–0.23 m from each goal (`xy_goal_tolerance` is 0.25 m). AMCL was within
+8 cm of the true position on the first two legs and 28 cm on the last. The first leg took 51 s: the
+path squeezes between the bunkers, where the robot backed off and replanned 6 times. With
+`inflation_radius` equal to `robot_radius` (0.35 m) and the chassis reaching 0.341 m, paths leave
+about 1 cm to obstacles. That's nav tuning.
+
+An earlier version drove the chassis with Gazebo's VelocityControl, which overrides vertical velocity
+(so gravity did nothing) in the chassis frame. A bunker corner tilted the robot and it flew out of
+the field, while Nav2 still reported goals reached. The planar joints replaced it.
 
 On macOS (Apple Silicon) the workspace builds (5 packages, LD19 driver skipped). A short sim run
 from a sandboxed shell didn't come up: DDS shared-memory errors meant the spawner never received
 `robot_description`. It hasn't been tried from a normal terminal yet. The Jetson is untested.
 
-## Updating the sentry model
+## The sentry model
 
-Re-export the URDF from Onshape, then in `src/sentry_description`:
+`sentry_description/urdf/sentry_onshape.xacro` is the Onshape URDF export with three edits: mesh
+paths point into `sentry_description/meshes/`, the non-ASCII link `17mm_Ü__` is renamed
+`barrel_17mm`, and the wheel and pitch joint types are macro parameters (fixed by default). Onshape's
+joint names are kept (`revolute_6` = gimbal yaw, `revolute_7` = pitch). A new export means redoing
+those edits by hand.
 
-```bash
-python3 scripts/onshape_to_xacro.py <export>/urdf/<name>.urdf urdf/sentry_onshape.xacro
-cp <export>/meshes/*.stl meshes/
-```
-
-The script keeps Onshape's joint names (`revolute_6` = gimbal yaw, `revolute_7` = pitch), so
-scripts that look joints up by name keep working.
+The meshes put the chassis's outer radius at 0.341 m (the swerve module corners), inside the
+costmaps' `robot_radius` of 0.35 m.
