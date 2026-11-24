@@ -40,6 +40,8 @@ nav:
       - Nodes:
           - camera_pub: dora/nodes/camera_pub.md
           - camera_sub: dora/nodes/camera_sub.md
+  - ROS 2:
+      - sentry-nav: ros2/sentry-nav.md
   - API Reference:
       - api/index.md
       - Python: api/python/

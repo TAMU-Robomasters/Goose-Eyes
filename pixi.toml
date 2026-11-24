@@ -84,6 +84,37 @@ rerun-sdk = ">=0.38.1, <0.39"
 # carries this cap there too.
 libopencv = { version = ">=4.13.0,<5", build-number = "<620" }
 
+# ---- ROS 2 workspace build (sentry-nav) --------------------------------------------------------
+# What `colcon build` in src/ros2/sentry-nav needs on top of the shared ROS stack: a C/C++ toolchain,
+# colcon, and the extra ROS packages sentry-nav's launches and the Gazebo (Harmonic) 1v1 sim use.
+# In the default and dev environments, so `pixi shell` (Jetson) / `pixi shell -e dev` (laptops)
+# followed by the usual colcon commands just works; see docs/ros2/sentry-nav.md.
+[feature.ros-build.dependencies]
+cmake = "*"
+ninja = "*"
+make = "*"
+pkg-config = "*"
+c-compiler = "*"
+cxx-compiler = "*"
+colcon-common-extensions = "*"
+pyserial = "*"                     # uart_odom
+ros-jazzy-ros-gz = "*"             # Gazebo Harmonic + ros_gz_sim / ros_gz_bridge
+ros-jazzy-xacro = "*"
+ros-jazzy-robot-state-publisher = "*"
+ros-jazzy-joint-state-publisher = "*"
+ros-jazzy-slam-toolbox = "*"
+ros-jazzy-pcl-conversions = "*"    # multi-laserscan-toolbox-ros2
+ros-jazzy-tf2-geometry-msgs = "*"
+ros-jazzy-diagnostic-updater = "*" # dual-ldlidar
+
+[feature.ros-build.activation.env]
+# Release builds + --symlink-install by default for `colcon build`; see the file for why.
+COLCON_DEFAULTS_FILE = "$PIXI_PROJECT_ROOT/src/ros2/colcon_defaults.yaml"
+
+[feature.ros-build.target.osx-arm64.activation.env]
+# macOS skips the Linux-only LD19 driver.
+COLCON_DEFAULTS_FILE = "$PIXI_PROJECT_ROOT/src/ros2/colcon_defaults_macos.yaml"
+
 # ---- Docs (MkDocs) -----------------------------------------------------------------------------
 # Separate feature so the runtime env doesn't carry the docs toolchain; `pixi run docs*` picks the
 # `docs` environment automatically because the tasks are only defined there. Same solve-group as the
@@ -121,6 +152,7 @@ fmt = "ruff format --check"
 fmt-fix = "ruff format"
 
 [environments]
-dev = { features = ["dev"], solve-group = "default" }
+default = { features = ["ros-build"], solve-group = "default" }
+dev = { features = ["dev", "ros-build"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
 lint = { features = ["lint"], no-default-feature = true }
