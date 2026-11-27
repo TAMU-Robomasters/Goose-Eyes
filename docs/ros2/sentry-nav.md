@@ -86,9 +86,5 @@ Gazebo LD19 x2 (on the turret) ──/lidar_{left,right}/ldlidar_node/scan──
 
 ## The sentry model
 
-`sentry_description/urdf/sentry.urdf.xacro` is the robot model: the hand-written frames at the top,
-the Onshape export below them. `sentry.gazebo.xacro` adds the sim-only parts. Onshape's joint names
-are kept (`revolute_6` = gimbal yaw, `revolute_7` = pitch).
-
 The meshes put the chassis's outer radius at 0.341 m (the swerve module corners), inside the
 costmaps' `robot_radius` of 0.35 m.
