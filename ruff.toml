@@ -2,6 +2,6 @@
 # `pixi run lint` / `pixi run fmt` locally, same commands in .github/workflows/ci.yml.
 target-version = "py312"
 
-# src/ros2/ holds ROS 2 workspaces pulled in as git submodules (sentry-nav); they follow their own
+# goose-eyes/ros2/ holds ROS 2 workspaces pulled in as git submodules (sentry-nav); they follow their own
 # repo's style and CI, so Goose Eyes' lint skips them.
-extend-exclude = ["src/ros2"]
+extend-exclude = ["goose-eyes/ros2"]

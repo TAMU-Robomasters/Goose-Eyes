@@ -2,7 +2,7 @@
 
 The sentry's Nav2 stack lives in its own repo,
 [TAMU-Robomasters/sentry-nav](https://github.com/TAMU-Robomasters/sentry-nav), pulled into Goose Eyes
-as a git submodule at `src/ros2/sentry-nav` on the `goose-eyes` branch. That branch is the
+as a git submodule at `goose-eyes/ros2/sentry-nav` on the `goose-eyes` branch. That branch is the
 Goose Eyes port: ROS 2 **Jazzy** (from RoboStack, through pixi), packages renamed from the Nav2
 tutorial's `sam_bot_*` to `sentry_*`, and a Gazebo (Harmonic) sim of the ARCC 1v1 battlefield.
 
@@ -26,8 +26,8 @@ git submodule update --init --recursive
 it when building: the sim doesn't need it.
 
 ```bash
-git submodule update --init src/ros2/sentry-nav
-git -C src/ros2/sentry-nav submodule update --init src/multi-laserscan-toolbox-ros2
+git submodule update --init goose-eyes/ros2/sentry-nav
+git -C goose-eyes/ros2/sentry-nav submodule update --init src/multi-laserscan-toolbox-ros2
 ```
 
 ## Build
@@ -37,7 +37,7 @@ feature, which is part of the `default` (Jetson) and `dev` (laptop) environments
 
 ```bash
 pixi shell -e dev            # on the Jetson: pixi shell
-cd src/ros2/sentry-nav
+cd goose-eyes/ros2/sentry-nav
 colcon build                 # Linux without dual-ldlidar access: add --packages-skip ldlidar ldlidar_component ldlidar_node
 source install/setup.bash
 ```

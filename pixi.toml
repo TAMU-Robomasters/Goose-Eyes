@@ -22,7 +22,7 @@ version = "0.1.0"
 # `pixi run dora run goose-eyes/dataflows/dataflow.yml` (or `dora run …` inside `pixi shell`); see docs/dora/index.md.
 
 # Shared by every platform. ROS 2 Jazzy comes from RoboStack everywhere — JetPack 7 doesn't ship
-# ROS, so there is no native one to prefer on the Jetson. Nothing in goose-eyes/ uses ROS 2 yet.
+# ROS, so there is no native one to prefer on the Jetson. Only goose-eyes/ros2/ uses ROS 2 so far.
 [dependencies]
 python = "3.12.*"
 coreutils = ">=9.11,<10"
@@ -97,11 +97,11 @@ ros-jazzy-pcl-conversions = "*"    # multi-laserscan-toolbox-ros2
 
 [feature.ros-build.activation.env]
 # For `colcon build`
-COLCON_DEFAULTS_FILE = "$PIXI_PROJECT_ROOT/src/ros2/colcon_defaults.yaml"
+COLCON_DEFAULTS_FILE = "$PIXI_PROJECT_ROOT/goose-eyes/ros2/colcon_defaults.yaml"
 
 [feature.ros-build.target.osx-arm64.activation.env]
 # macOS skips the Linux-only LD19 driver.
-COLCON_DEFAULTS_FILE = "$PIXI_PROJECT_ROOT/src/ros2/colcon_defaults_macos.yaml"
+COLCON_DEFAULTS_FILE = "$PIXI_PROJECT_ROOT/goose-eyes/ros2/colcon_defaults_macos.yaml"
 # Prevents crashes by telling the linker to only link stuff it needs
 LDFLAGS = "-Wl,-dead_strip_dylibs"
 
