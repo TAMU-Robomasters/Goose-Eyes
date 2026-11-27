@@ -1,9 +1,3 @@
-# colcon defaults for the ROS 2 workspaces under src/ros2/. The pixi ros-build feature points
-# COLCON_DEFAULTS_FILE here, so a plain `colcon build` inside `pixi shell` picks these up.
-#
-# Release: conda's GCC 15 turns on libstdc++ bounds assertions (_GLIBCXX_ASSERTIONS) in unoptimized
-# builds, and colcon's default build type is unoptimized. multi-laserscan-toolbox-ros2 has an
-# off-by-one write in transform_360_data (tools.cpp) that those assertions abort on.
 build:
   symlink-install: true
   cmake-args:

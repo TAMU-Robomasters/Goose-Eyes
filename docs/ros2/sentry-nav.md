@@ -42,13 +42,6 @@ colcon build                 # Linux without dual-ldlidar access: add --packages
 source install/setup.bash
 ```
 
-pixi sets `COLCON_DEFAULTS_FILE` to `src/ros2/colcon_defaults.yaml`, so a plain `colcon build`
-already uses `--symlink-install` and a Release build. On macOS it points at
-`colcon_defaults_macos.yaml` instead, which also skips the LD19 driver (it needs Linux serial
-headers; the sim doesn't use it). Release matters: conda's GCC 15 enables
-libstdc++ bounds assertions in unoptimized builds, and the scan merger has an off-by-one write
-(`transform_360_data` in `tools.cpp`) that aborts under them.
-
 ## Run the 1v1 sim
 
 ```bash
@@ -90,25 +83,6 @@ Gazebo LD19 x2 (on the turret) ──/lidar_{left,right}/ldlidar_node/scan──
 - **The field** (`worlds/1v1_field.sdf`, `maps/1v1_field.{pgm,yaml}`) is generated from the Events
   Manual's 1v1 dimensions (Fig. 4-3, 4-4) by `scripts/gen_1v1_field.py`. Edit the script, not the
   outputs.
-
-### Verified (x86 Linux, RTX 3070)
-
-Built and run on 2026-11-23. The chassis spins at about 4 rad/s. The turret held its heading to
-within 0.3° with the earlier drive model; that hasn't been re-measured since the planar joints. Driven into a wall while spinning, the robot stops at the wall and stays on the floor.
-In a scripted run (red zone → blue zone → top-right corner → red zone) every goal succeeded, and
-the true position ended 0.17–0.23 m from each goal (`xy_goal_tolerance` is 0.25 m). AMCL was within
-8 cm of the true position on the first two legs and 28 cm on the last. The first leg took 51 s: the
-path squeezes between the bunkers, where the robot backed off and replanned 6 times. With
-`inflation_radius` equal to `robot_radius` (0.35 m) and the chassis reaching 0.341 m, paths leave
-about 1 cm to obstacles. That's nav tuning.
-
-An earlier version drove the chassis with Gazebo's VelocityControl, which overrides vertical velocity
-(so gravity did nothing) in the chassis frame. A bunker corner tilted the robot and it flew out of
-the field, while Nav2 still reported goals reached. The planar joints replaced it.
-
-On macOS (Apple Silicon) the workspace builds (5 packages, LD19 driver skipped). A short sim run
-from a sandboxed shell didn't come up: DDS shared-memory errors meant the spawner never received
-`robot_description`. It hasn't been tried from a normal terminal yet. The Jetson is untested.
 
 ## The sentry model
 

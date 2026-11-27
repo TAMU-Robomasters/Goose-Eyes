@@ -1,10 +1,8 @@
-# colcon defaults on macOS (see colcon_defaults.yaml for the shared settings and why).
-# The LD19 driver (dual-ldlidar) uses Linux serial headers and only matters on the robot; the
-# Gazebo sim publishes the lidar topics itself, so macOS skips it.
 build:
   symlink-install: true
   cmake-args:
     - -DCMAKE_BUILD_TYPE=Release
+  # Lidar not needed for mac sim
   packages-skip:
     - ldlidar
     - ldlidar_component
